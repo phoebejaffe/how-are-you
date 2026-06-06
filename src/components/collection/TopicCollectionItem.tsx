@@ -4,7 +4,6 @@ import {
   isTopicFollowUpsCollapsed,
   setTopicFollowUpsCollapsed,
 } from "../../lib/topicFollowUpCollapse";
-import { ChannelPicker } from "../ui/ChannelPicker";
 import { SectionAddLink } from "../ui/SectionAddLink";
 import { CollectionItemRow } from "./CollectionItemRow";
 import { FOLLOW_UP_ITEM_FEATURES, TOPIC_ITEM_FEATURES } from "./itemFeatures";
@@ -52,7 +51,6 @@ export function TopicCollectionItem({
   pinnedStrip?: boolean;
 }) {
   const [followUpText, setFollowUpText] = useState("");
-  const [followUpChannel, setFollowUpChannel] = useState<Channel>("call");
   const [addingFollowUp, setAddingFollowUp] = useState(false);
   const [showAllFollowUps, setShowAllFollowUps] = useState(false);
   const [followUpsExpanded, setFollowUpsExpanded] = useState(
@@ -183,7 +181,7 @@ export function TopicCollectionItem({
                 e.preventDefault();
                 const trimmed = followUpText.trim();
                 if (!trimmed) return;
-                onAddFollowUp(trimmed, followUpChannel);
+                onAddFollowUp(trimmed, "text");
                 setFollowUpText("");
                 setAddingFollowUp(false);
               }}
@@ -195,7 +193,6 @@ export function TopicCollectionItem({
                 className="input input-compact min-w-0 flex-1"
                 autoFocus
               />
-              <ChannelPicker value={followUpChannel} onChange={setFollowUpChannel} />
               <button type="submit" className="btn-primary btn-compact">
                 Add
               </button>

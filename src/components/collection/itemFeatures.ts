@@ -9,7 +9,7 @@ export const TOPIC_ITEM_FEATURES: CollectionItemFeatures = {
   unarchive: true,
   moveToFolder: true,
   delete: true,
-  showChannel: true,
+  showChannel: false,
   showTimestamp: true,
   timeCluster: true,
   collapsible: true,
@@ -31,7 +31,7 @@ export const FOLLOW_UP_ITEM_FEATURES: CollectionItemFeatures = {
   copy: true,
   edit: true,
   delete: true,
-  showChannel: true,
+  showChannel: false,
   showTimestamp: true,
   timeCluster: true,
 };

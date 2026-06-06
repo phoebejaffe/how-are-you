@@ -3,7 +3,6 @@ import type { Channel, FollowUp, Topic, TopicFolder } from "../../types";
 import { sortArchivedTopics } from "../../lib/topicOrder";
 import { topicsLayoutStorageKey } from "../../lib/topicFolders";
 import { isTopicSortId, topicSortId } from "../dnd/dndIds";
-import { ChannelPicker } from "../ui/ChannelPicker";
 import { RowMenu } from "../ui/RowMenu";
 import { SectionAddLink } from "../ui/SectionAddLink";
 import { CollectionSection } from "./CollectionSection";
@@ -64,7 +63,6 @@ export function TopicsSection({
   onReorderLayout: (draggedId: string, targetId: string) => void;
 }) {
   const [topicText, setTopicText] = useState("");
-  const [topicChannel, setTopicChannel] = useState<Channel>("call");
   const [targetFolderId, setTargetFolderId] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const hasFolders = folders.length > 0;
@@ -124,7 +122,6 @@ export function TopicsSection({
         dragItems: true,
         dragFolders: true,
         addFolderPicker: true,
-        addChannelPicker: true,
       }}
       isItemDragId={isTopicSortId}
       itemIdFromDragId={(dragId) => dragId.slice("topic-sort:".length)}
@@ -139,15 +136,13 @@ export function TopicsSection({
       addForm={({ onDone }) => (
         <AddTopicForm
           topicText={topicText}
-          topicChannel={topicChannel}
           targetFolderId={targetFolderId}
           folders={folders}
           hasFolders={hasFolders}
           onTextChange={setTopicText}
-          onChannelChange={setTopicChannel}
           onFolderChange={setTargetFolderId}
           onSubmit={() => {
-            onAddTopic(topicText, topicChannel, targetFolderId || undefined);
+            onAddTopic(topicText, "text", targetFolderId || undefined);
             setTopicText("");
             setTargetFolderId("");
             onDone();
@@ -191,23 +186,19 @@ export function TopicsSection({
 
 function AddTopicForm({
   topicText,
-  topicChannel,
   targetFolderId,
   folders,
   hasFolders,
   onTextChange,
-  onChannelChange,
   onFolderChange,
   onSubmit,
   onCancel,
 }: {
   topicText: string;
-  topicChannel: Channel;
   targetFolderId: string;
   folders: TopicFolder[];
   hasFolders: boolean;
   onTextChange: (value: string) => void;
-  onChannelChange: (value: Channel) => void;
   onFolderChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
@@ -229,7 +220,6 @@ function AddTopicForm({
         className="input input-compact min-w-0 flex-1"
         autoFocus
       />
-      <ChannelPicker value={topicChannel} onChange={onChannelChange} />
       {hasFolders && (
         <select
           value={targetFolderId}
