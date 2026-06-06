@@ -33,7 +33,7 @@ export function RowMenu({ items }: { items: RowMenuItem[] }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded px-1.5 py-0.5 text-sm leading-none text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+        className="flex min-h-10 min-w-10 items-center justify-center rounded text-sm leading-none text-stone-400 active:bg-stone-200 active:text-stone-600"
         aria-label="Actions"
         aria-expanded={open}
         aria-haspopup="menu"
@@ -54,7 +54,7 @@ export function RowMenu({ items }: { items: RowMenuItem[] }) {
                 item.onClick();
                 setOpen(false);
               }}
-              className={`block w-full px-3 py-1.5 text-left text-xs hover:bg-stone-50 ${
+              className={`block w-full px-3 py-2.5 text-left text-xs active:bg-stone-50 ${
                 item.destructive ? "text-terracotta-dark" : "text-stone-700"
               }`}
             >
