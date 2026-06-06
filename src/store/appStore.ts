@@ -10,7 +10,12 @@ import {
   type UndoAction,
   type UndoSnapshot,
 } from "../domain/undoQueue";
-import { reorderFactFolders } from "../lib/factFolders";
+import {
+  foldersFromLayoutOrder,
+  reorderLayoutItems,
+  resolveFactsLayoutOrder,
+  saveFactsLayoutOrder,
+} from "../lib/factFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
@@ -59,7 +64,7 @@ interface AppState {
   renameFactFolder: (folderId: string, name: string) => Promise<void>;
   deleteFactFolder: (folderId: string) => Promise<void>;
   toggleFactFolderCollapsed: (folderId: string) => Promise<void>;
-  reorderFactFolder: (draggedId: string, targetId: string) => Promise<void>;
+  reorderFactsLayout: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
@@ -542,14 +547,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().loadBundle(personKey);
   },
 
-  async reorderFactFolder(draggedId, targetId) {
-    const personKey = bundleKeyForFactFolder(get().bundles, draggedId);
-    if (!personKey || draggedId === targetId) return;
-    const folders = get().bundles[personKey].factFolders;
-    const reordered = reorderFactFolders(folders, draggedId, targetId);
+  async reorderFactsLayout(personKey, draggedId, targetId) {
+    if (draggedId === targetId) return;
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
 
-    for (const folder of reordered) {
-      await repo.saveFactFolder(folder);
+    const currentOrder = resolveFactsLayoutOrder(personKey, bundle.factFolders);
+    const nextOrder = reorderLayoutItems(currentOrder, draggedId, targetId);
+    saveFactsLayoutOrder(personKey, nextOrder);
+
+    const reorderedFolders = foldersFromLayoutOrder(bundle.factFolders, nextOrder);
+    for (const folder of reorderedFolders) {
+      const prev = bundle.factFolders.find((f) => f.id === folder.id);
+      if (prev && prev.sortOrder !== folder.sortOrder) {
+        await repo.saveFactFolder(folder);
+      }
     }
     await get().loadBundle(personKey);
   },

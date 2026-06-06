@@ -52,3 +52,86 @@ export function reorderFactFolders(
   next.splice(toIndex, 0, removed);
   return next.map((folder, index) => ({ ...folder, sortOrder: index }));
 }
+
+function factsLayoutStorageKey(personKey: string): string {
+  return `how-are-you-facts-layout-${personKey}`;
+}
+
+export function loadFactsLayoutOrder(personKey: string): string[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(factsLayoutStorageKey(personKey));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as string[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveFactsLayoutOrder(personKey: string, order: string[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(factsLayoutStorageKey(personKey), JSON.stringify(order));
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function resolveFactsLayoutOrder(personKey: string, folders: FactFolder[]): string[] {
+  const folderIds = sortFactFolders(folders).map((f) => f.id);
+  const stored = loadFactsLayoutOrder(personKey) ?? [];
+  const order: string[] = [];
+  const seen = new Set<string>();
+
+  for (const id of stored) {
+    if (id === UNSORTED_DROP_ID || folderIds.includes(id)) {
+      if (!seen.has(id)) {
+        order.push(id);
+        seen.add(id);
+      }
+    }
+  }
+
+  for (const id of folderIds) {
+    if (!seen.has(id)) {
+      order.push(id);
+      seen.add(id);
+    }
+  }
+
+  if (!seen.has(UNSORTED_DROP_ID)) {
+    order.push(UNSORTED_DROP_ID);
+  }
+
+  return order;
+}
+
+export function reorderLayoutItems(order: string[], draggedId: string, targetId: string): string[] {
+  if (draggedId === targetId) return order;
+
+  const fromIndex = order.indexOf(draggedId);
+  const toIndex = order.indexOf(targetId);
+  if (fromIndex < 0 || toIndex < 0) return order;
+
+  const next = [...order];
+  const [removed] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, removed);
+  return next;
+}
+
+export function moveUnsortedToEnd(order: string[]): string[] {
+  const without = order.filter((id) => id !== UNSORTED_DROP_ID);
+  return [...without, UNSORTED_DROP_ID];
+}
+
+export function foldersFromLayoutOrder(folders: FactFolder[], layoutOrder: string[]): FactFolder[] {
+  const folderMap = new Map(folders.map((f) => [f.id, f]));
+  return layoutOrder
+    .filter((id) => id !== UNSORTED_DROP_ID)
+    .map((id, index) => {
+      const folder = folderMap.get(id);
+      return folder ? { ...folder, sortOrder: index } : null;
+    })
+    .filter((folder): folder is FactFolder => folder !== null);
+}

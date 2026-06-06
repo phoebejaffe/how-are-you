@@ -123,6 +123,7 @@ export function TopicRow({
   return (
     <>
       <EntryRow
+        topic
         text={topic.text}
         timestampIso={topic.createdAtIso}
         channel={topic.channel}
@@ -190,9 +191,9 @@ export function TopicRow({
             <button
               type="button"
               onClick={() => setAddingFollowUp(true)}
-              className="py-0.5 text-xs text-stone-400 hover:text-stone-600 hover:underline"
+              className="text-xs text-stone-400 hover:text-stone-600 hover:underline"
             >
-              Add followup
+              Record a followup
             </button>
           )}
           {!archived && addingFollowUp && (

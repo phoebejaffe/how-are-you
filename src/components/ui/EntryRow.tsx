@@ -15,6 +15,7 @@ export function EntryRow({
   archived = false,
   highlighted = false,
   compact = false,
+  topic = false,
   disclosureCollapsed = false,
   onRowClick,
   onClusterSelect,
@@ -28,6 +29,7 @@ export function EntryRow({
   archived?: boolean;
   highlighted?: boolean;
   compact?: boolean;
+  topic?: boolean;
   disclosureCollapsed?: boolean;
   onRowClick?: () => void;
   onClusterSelect?: (timestampIso: string) => void;
@@ -55,7 +57,7 @@ export function EntryRow({
           : undefined
       }
       className={`flex items-start gap-2 rounded pl-2 text-sm transition-colors ${
-        compact ? "py-0.5" : "min-h-10 py-2"
+        compact ? "py-0.5" : topic ? "my-1 py-1" : "min-h-10 py-2"
       } ${
         highlighted
           ? "bg-amber-100/90 ring-1 ring-amber-300/80"
@@ -75,8 +77,11 @@ export function EntryRow({
       </div>
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
         {disclosureCollapsed && (
-          <span className="text-[10px] text-stone-400" aria-hidden="true">
-            ▸
+          <span
+            className="relative inline-flex shrink-0 -top-0.5 items-center justify-center text-[16px] leading-none text-stone-500"
+            aria-hidden="true"
+          >
+            <span className="inline-block rotate-180">^</span>
           </span>
         )}
         {onClusterSelect ? (

@@ -36,7 +36,7 @@ export function PersonPage() {
   const renameFactFolder = useAppStore((s) => s.renameFactFolder);
   const deleteFactFolder = useAppStore((s) => s.deleteFactFolder);
   const toggleFactFolderCollapsed = useAppStore((s) => s.toggleFactFolderCollapsed);
-  const reorderFactFolder = useAppStore((s) => s.reorderFactFolder);
+  const reorderFactsLayout = useAppStore((s) => s.reorderFactsLayout);
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -249,6 +249,7 @@ export function PersonPage() {
       </section>
 
       <FactsSection
+        personKey={nameKey}
         folders={bundle.factFolders ?? []}
         unpinnedFacts={unpinnedFacts}
         onAddFact={(text, folderId) => void addFact(nameKey, text, "text", false, folderId)}
@@ -260,7 +261,7 @@ export function PersonPage() {
         onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
         onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
         onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
-        onReorderFolder={(draggedId, targetId) => void reorderFactFolder(draggedId, targetId)}
+        onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(nameKey, draggedId, targetId)}
       />
 
       <section>
