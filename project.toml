@@ -1,0 +1,31 @@
+name = "how-are-you"
+description = "Track conversation topics and facts for friends"
+icon = "💬"
+category = "tools"
+autostart = "on-demand"
+
+[[process]]
+name = "dev"
+type = "service"
+runtime = "shell"
+cmd = "npm run dev"
+port = 3300
+health = "http://127.0.0.1:3300/"
+
+[[process]]
+name = "build"
+type = "command"
+runtime = "shell"
+cmd = "npm run build"
+
+[[process]]
+name = "preview"
+type = "command"
+runtime = "shell"
+cmd = "npm run preview"
+
+[[process]]
+name = "test"
+type = "command"
+runtime = "shell"
+cmd = "npm run test"

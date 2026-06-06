@@ -1,0 +1,557 @@
+import { create } from "zustand";
+import { validateRename } from "../domain/personRename";
+import { findImportConflicts, mergePersonBundles, parseExportPayload } from "../domain/importExport";
+import {
+  clearPersistedUndo,
+  createUndoAction,
+  loadAllPersistedUndos,
+  persistUndo,
+  UNDO_MS,
+  type UndoAction,
+  type UndoSnapshot,
+} from "../domain/undoQueue";
+import { createId, nowIso, personNameKey } from "../lib/ids";
+import * as repo from "../storage/repository";
+import type {
+  Channel,
+  Fact,
+  FollowUp,
+  ImportConflictResolution,
+  Person,
+  PersonBundle,
+  Topic,
+} from "../types";
+import { useToastStore } from "./toastStore";
+
+interface AppState {
+  ready: boolean;
+  people: Person[];
+  bundles: Record<string, PersonBundle>;
+  pendingDeletes: Set<string>;
+  pendingTopicDeletes: Set<string>;
+  pendingFactDeletes: Set<string>;
+  pendingArchives: Set<string>;
+  hydrate: () => Promise<void>;
+  refreshPeople: () => Promise<void>;
+  loadBundle: (nameKey: string) => Promise<PersonBundle | null>;
+  addPerson: (displayName: string) => Promise<void>;
+  renamePerson: (oldKey: string, newDisplayName: string) => Promise<string>;
+  scheduleDeletePerson: (nameKey: string) => Promise<void>;
+  addTopic: (nameKey: string, text: string, channel: Channel) => Promise<void>;
+  scheduleArchiveTopic: (topicId: string) => Promise<void>;
+  scheduleDeleteTopic: (topicId: string) => Promise<void>;
+  toggleTopicPin: (topicId: string) => Promise<void>;
+  updateTopic: (topicId: string, text: string, channel: Channel) => Promise<void>;
+  addFollowUp: (topicId: string, text: string, channel: Channel) => Promise<void>;
+  updateFollowUp: (followUpId: string, text: string, channel: Channel) => Promise<void>;
+  addFact: (nameKey: string, text: string, channel: Channel, pinned?: boolean) => Promise<void>;
+  updateFact: (factId: string, text: string, channel: Channel) => Promise<void>;
+  toggleFactPin: (factId: string) => Promise<void>;
+  scheduleDeleteFact: (factId: string) => Promise<void>;
+  undoAction: (action: UndoAction) => Promise<void>;
+  commitUndo: (action: UndoAction) => Promise<void>;
+  restorePersistedUndos: () => Promise<void>;
+  exportSelected: (selectedKeys: string[]) => void;
+  importFile: (file: File) => Promise<{
+    newPeople: PersonBundle[];
+    conflicts: ReturnType<typeof findImportConflicts>;
+  }>;
+  applyImportResolutions: (
+    importedPeople: PersonBundle[],
+    resolutions: Map<string, ImportConflictResolution>,
+  ) => Promise<{ imported: number; merged: number; skipped: number }>;
+}
+
+function bundleKeyForTopic(bundles: Record<string, PersonBundle>, topicId: string): string | null {
+  for (const [key, bundle] of Object.entries(bundles)) {
+    if (bundle.topics.some((t) => t.id === topicId)) return key;
+  }
+  return null;
+}
+
+function bundleKeyForFact(bundles: Record<string, PersonBundle>, factId: string): string | null {
+  for (const [key, bundle] of Object.entries(bundles)) {
+    if (bundle.facts.some((f) => f.id === factId)) return key;
+  }
+  return null;
+}
+
+function bundleKeyForFollowUp(bundles: Record<string, PersonBundle>, followUpId: string): string | null {
+  for (const [key, bundle] of Object.entries(bundles)) {
+    if (bundle.followUps.some((f) => f.id === followUpId)) return key;
+  }
+  return null;
+}
+
+function showUndoToast(action: UndoAction, onUndo: () => void, onCommit: () => void) {
+  useToastStore.getState().add(action.message, "info", UNDO_MS, {
+    label: "Undo",
+    onClick: onUndo,
+    onDismiss: onCommit,
+  });
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
+  ready: false,
+  people: [],
+  bundles: {},
+  pendingDeletes: new Set(),
+  pendingTopicDeletes: new Set(),
+  pendingFactDeletes: new Set(),
+  pendingArchives: new Set(),
+
+  async hydrate() {
+    const people = await repo.listPeople();
+    set({ people, ready: true });
+    await get().restorePersistedUndos();
+  },
+
+  async refreshPeople() {
+    const people = await repo.listPeople();
+    set({ people });
+  },
+
+  async loadBundle(nameKey) {
+    const bundle = await repo.getPersonBundle(nameKey);
+    if (bundle) {
+      set((state) => ({ bundles: { ...state.bundles, [nameKey]: bundle } }));
+    }
+    return bundle;
+  },
+
+  async addPerson(displayName) {
+    const key = personNameKey(displayName);
+    if (!key) throw new Error("Name cannot be empty.");
+    if (get().people.some((p) => p.nameKey === key)) {
+      throw new Error(`Someone named "${displayName.trim()}" already exists.`);
+    }
+    const now = nowIso();
+    const person: Person = { nameKey: key, displayName: displayName.trim(), createdAtIso: now, updatedAtIso: now };
+    await repo.savePerson(person);
+    await get().refreshPeople();
+    await get().loadBundle(key);
+  },
+
+  async renamePerson(oldKey, newDisplayName) {
+    const result = validateRename(get().people, oldKey, newDisplayName);
+    if (!result.ok) throw new Error(result.error);
+    if (result.newKey === oldKey) {
+      const bundle = get().bundles[oldKey];
+      if (!bundle) return oldKey;
+      const person = { ...bundle.person, displayName: newDisplayName.trim(), updatedAtIso: nowIso() };
+      await repo.savePerson(person);
+      await get().loadBundle(oldKey);
+      await get().refreshPeople();
+      return oldKey;
+    }
+    await repo.renamePerson(oldKey, result.newKey, newDisplayName.trim());
+    set((state) => {
+      const nextBundles = { ...state.bundles };
+      if (nextBundles[oldKey]) {
+        nextBundles[result.newKey] = {
+          ...nextBundles[oldKey],
+          person: { ...nextBundles[oldKey].person, nameKey: result.newKey, displayName: newDisplayName.trim() },
+          topics: nextBundles[oldKey].topics.map((t) => ({ ...t, personNameKey: result.newKey })),
+          facts: nextBundles[oldKey].facts.map((f) => ({ ...f, personNameKey: result.newKey })),
+        };
+        delete nextBundles[oldKey];
+      }
+      return { bundles: nextBundles };
+    });
+    await get().refreshPeople();
+    await get().loadBundle(result.newKey);
+    return result.newKey;
+  },
+
+  async scheduleDeletePerson(nameKey) {
+    const bundle = (await get().loadBundle(nameKey)) ?? (await repo.getPersonBundle(nameKey));
+    if (!bundle) return;
+
+    const action = createUndoAction("delete_person", `Deleted ${bundle.person.displayName}`, {
+      type: "person",
+      bundle,
+    });
+    persistUndo(action);
+
+    set((state) => ({
+      pendingDeletes: new Set(state.pendingDeletes).add(nameKey),
+    }));
+
+    const commit = async () => {
+      clearPersistedUndo(action.id);
+      if (!get().pendingDeletes.has(nameKey)) return;
+      await repo.deletePersonHard(nameKey);
+      set((state) => {
+        const pendingDeletes = new Set(state.pendingDeletes);
+        pendingDeletes.delete(nameKey);
+        const bundles = { ...state.bundles };
+        delete bundles[nameKey];
+        return { pendingDeletes, bundles };
+      });
+      await get().refreshPeople();
+    };
+
+    const undo = async () => {
+      clearPersistedUndo(action.id);
+      set((state) => {
+        const pendingDeletes = new Set(state.pendingDeletes);
+        pendingDeletes.delete(nameKey);
+        return { pendingDeletes };
+      });
+      await get().undoAction(action);
+    };
+
+    showUndoToast(action, undo, commit);
+    setTimeout(() => {
+      if (get().pendingDeletes.has(nameKey)) commit();
+    }, UNDO_MS);
+  },
+
+  async addTopic(nameKey, text, channel) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const topic: Topic = {
+      id: createId(),
+      personNameKey: nameKey,
+      text: trimmed,
+      status: "active",
+      pinned: false,
+      createdAtIso: nowIso(),
+      channel,
+    };
+    await repo.saveTopic(topic);
+    await get().loadBundle(nameKey);
+  },
+
+  async scheduleArchiveTopic(topicId) {
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const topic = bundle.topics.find((t) => t.id === topicId);
+    if (!topic || topic.status === "archived") return;
+
+    const action = createUndoAction("archive_topic", "Topic archived", {
+      type: "archive_topic",
+      topic,
+    });
+    persistUndo(action);
+
+    const archived: Topic = { ...topic, status: "archived" };
+    await repo.saveTopic(archived);
+    set((state) => ({
+      pendingArchives: new Set(state.pendingArchives).add(topicId),
+    }));
+    await get().loadBundle(personKey);
+
+    const commit = async () => {
+      clearPersistedUndo(action.id);
+      set((state) => {
+        const pendingArchives = new Set(state.pendingArchives);
+        pendingArchives.delete(topicId);
+        return { pendingArchives };
+      });
+    };
+
+    const undo = async () => {
+      clearPersistedUndo(action.id);
+      await get().undoAction(action);
+      set((state) => {
+        const pendingArchives = new Set(state.pendingArchives);
+        pendingArchives.delete(topicId);
+        return { pendingArchives };
+      });
+    };
+
+    showUndoToast(action, undo, commit);
+    setTimeout(() => {
+      if (get().pendingArchives.has(topicId)) commit();
+    }, UNDO_MS);
+  },
+
+  async scheduleDeleteTopic(topicId) {
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const topic = bundle.topics.find((t) => t.id === topicId);
+    if (!topic) return;
+    const followUps = bundle.followUps.filter((f) => f.topicId === topicId);
+
+    const action = createUndoAction("delete_topic", "Topic deleted", {
+      type: "topic",
+      topic,
+      followUps,
+    });
+    persistUndo(action);
+
+    set((state) => ({
+      pendingTopicDeletes: new Set(state.pendingTopicDeletes).add(topicId),
+    }));
+
+    const commit = async () => {
+      clearPersistedUndo(action.id);
+      if (!get().pendingTopicDeletes.has(topicId)) return;
+      await repo.deleteTopicHard(topicId);
+      set((state) => {
+        const pendingTopicDeletes = new Set(state.pendingTopicDeletes);
+        pendingTopicDeletes.delete(topicId);
+        return { pendingTopicDeletes };
+      });
+      await get().loadBundle(personKey);
+    };
+
+    const undo = async () => {
+      clearPersistedUndo(action.id);
+      set((state) => {
+        const pendingTopicDeletes = new Set(state.pendingTopicDeletes);
+        pendingTopicDeletes.delete(topicId);
+        return { pendingTopicDeletes };
+      });
+      await get().undoAction(action);
+    };
+
+    showUndoToast(action, undo, commit);
+    setTimeout(() => {
+      if (get().pendingTopicDeletes.has(topicId)) commit();
+    }, UNDO_MS);
+  },
+
+  async toggleTopicPin(topicId) {
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
+    if (!topic) return;
+    await repo.saveTopic({ ...topic, pinned: !topic.pinned });
+    await get().loadBundle(personKey);
+  },
+
+  async updateTopic(topicId, text, channel) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
+    if (!topic) return;
+    await repo.saveTopic({ ...topic, text: trimmed, channel });
+    await get().loadBundle(personKey);
+  },
+
+  async addFollowUp(topicId, text, channel) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const followUp: FollowUp = {
+      id: createId(),
+      topicId,
+      text: trimmed,
+      recordedAtIso: nowIso(),
+      channel,
+    };
+    await repo.saveFollowUp(followUp);
+    await get().loadBundle(personKey);
+  },
+
+  async updateFollowUp(followUpId, text, channel) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForFollowUp(get().bundles, followUpId);
+    if (!personKey) return;
+    const followUp = get().bundles[personKey].followUps.find((f) => f.id === followUpId);
+    if (!followUp) return;
+    await repo.saveFollowUp({ ...followUp, text: trimmed, channel });
+    await get().loadBundle(personKey);
+  },
+
+  async addFact(nameKey, text, channel, pinned = false) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const fact: Fact = {
+      id: createId(),
+      personNameKey: nameKey,
+      text: trimmed,
+      pinned,
+      recordedAtIso: nowIso(),
+      channel,
+    };
+    await repo.saveFact(fact);
+    await get().loadBundle(nameKey);
+  },
+
+  async updateFact(factId, text, channel) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForFact(get().bundles, factId);
+    if (!personKey) return;
+    const fact = get().bundles[personKey].facts.find((f) => f.id === factId);
+    if (!fact) return;
+    await repo.saveFact({ ...fact, text: trimmed, channel });
+    await get().loadBundle(personKey);
+  },
+
+  async toggleFactPin(factId) {
+    const personKey = bundleKeyForFact(get().bundles, factId);
+    if (!personKey) return;
+    const fact = get().bundles[personKey].facts.find((f) => f.id === factId);
+    if (!fact) return;
+    await repo.saveFact({ ...fact, pinned: !fact.pinned });
+    await get().loadBundle(personKey);
+  },
+
+  async scheduleDeleteFact(factId) {
+    const personKey = bundleKeyForFact(get().bundles, factId);
+    if (!personKey) return;
+    const fact = get().bundles[personKey].facts.find((f) => f.id === factId);
+    if (!fact) return;
+
+    const action = createUndoAction("delete_fact", "Fact deleted", { type: "fact", fact });
+    persistUndo(action);
+
+    set((state) => ({
+      pendingFactDeletes: new Set(state.pendingFactDeletes).add(factId),
+    }));
+
+    const commit = async () => {
+      clearPersistedUndo(action.id);
+      if (!get().pendingFactDeletes.has(factId)) return;
+      await repo.deleteFactHard(factId);
+      set((state) => {
+        const pendingFactDeletes = new Set(state.pendingFactDeletes);
+        pendingFactDeletes.delete(factId);
+        return { pendingFactDeletes };
+      });
+      await get().loadBundle(personKey);
+    };
+
+    const undo = async () => {
+      clearPersistedUndo(action.id);
+      set((state) => {
+        const pendingFactDeletes = new Set(state.pendingFactDeletes);
+        pendingFactDeletes.delete(factId);
+        return { pendingFactDeletes };
+      });
+      await get().undoAction(action);
+    };
+
+    showUndoToast(action, undo, commit);
+    setTimeout(() => {
+      if (get().pendingFactDeletes.has(factId)) commit();
+    }, UNDO_MS);
+  },
+
+  async undoAction(action) {
+    const snapshot = action.snapshot as UndoSnapshot;
+    if (snapshot.type === "person") {
+      await repo.savePersonBundle(snapshot.bundle);
+      set((state) => ({
+        bundles: { ...state.bundles, [snapshot.bundle.person.nameKey]: snapshot.bundle },
+      }));
+      await get().refreshPeople();
+    } else if (snapshot.type === "topic") {
+      await repo.saveTopic(snapshot.topic);
+      for (const f of snapshot.followUps) await repo.saveFollowUp(f);
+      await get().loadBundle(snapshot.topic.personNameKey);
+    } else if (snapshot.type === "fact") {
+      await repo.saveFact(snapshot.fact);
+      await get().loadBundle(snapshot.fact.personNameKey);
+    } else if (snapshot.type === "archive_topic") {
+      await repo.saveTopic(snapshot.topic);
+      await get().loadBundle(snapshot.topic.personNameKey);
+    }
+  },
+
+  async commitUndo(action) {
+    const snapshot = action.snapshot as UndoSnapshot;
+    if (snapshot.type === "person") {
+      await repo.deletePersonHard(snapshot.bundle.person.nameKey);
+      await get().refreshPeople();
+    } else if (snapshot.type === "topic") {
+      await repo.deleteTopicHard(snapshot.topic.id);
+      await get().loadBundle(snapshot.topic.personNameKey);
+    } else if (snapshot.type === "fact") {
+      await repo.deleteFactHard(snapshot.fact.id);
+      await get().loadBundle(snapshot.fact.personNameKey);
+    }
+  },
+
+  async restorePersistedUndos() {
+    const actions = loadAllPersistedUndos();
+    for (const action of actions) {
+      if (action.commitAtMs <= Date.now()) {
+        clearPersistedUndo(action.id);
+        await get().commitUndo(action);
+        continue;
+      }
+      const remaining = action.commitAtMs - Date.now();
+      const snapshot = action.snapshot;
+      if (snapshot.type === "person") {
+        set((state) => ({
+          pendingDeletes: new Set(state.pendingDeletes).add(snapshot.bundle.person.nameKey),
+        }));
+      } else if (snapshot.type === "topic") {
+        set((state) => ({
+          pendingTopicDeletes: new Set(state.pendingTopicDeletes).add(snapshot.topic.id),
+        }));
+      } else if (snapshot.type === "fact") {
+        set((state) => ({
+          pendingFactDeletes: new Set(state.pendingFactDeletes).add(snapshot.fact.id),
+        }));
+      } else if (snapshot.type === "archive_topic") {
+        set((state) => ({
+          pendingArchives: new Set(state.pendingArchives).add(snapshot.topic.id),
+        }));
+      }
+      setTimeout(() => get().commitUndo(action), remaining);
+    }
+  },
+
+  exportSelected(_selectedKeys) {
+    // Export is handled in SettingsPage via repository for completeness.
+  },
+
+  async importFile(file) {
+    const text = await file.text();
+    const payload = parseExportPayload(JSON.parse(text));
+    const existing = await repo.listAllBundles();
+    const existingKeys = new Set(existing.map((b) => b.person.nameKey));
+    const conflicts = findImportConflicts(payload.people, existing);
+    const conflictKeys = new Set(conflicts.map((c) => c.imported.person.nameKey));
+    const newPeople = payload.people.filter((p) => !existingKeys.has(p.person.nameKey) && !conflictKeys.has(p.person.nameKey));
+    return { newPeople, conflicts };
+  },
+
+  async applyImportResolutions(importedPeople, resolutions) {
+    const existing = await repo.listAllBundles();
+    const existingByKey = new Map(existing.map((b) => [b.person.nameKey, b]));
+    let imported = 0;
+    let mergedCount = 0;
+    let skipped = 0;
+
+    for (const bundle of importedPeople) {
+      const key = bundle.person.nameKey;
+      const existingBundle = existingByKey.get(key);
+
+      if (!existingBundle) {
+        await repo.savePersonBundle(bundle);
+        imported++;
+        continue;
+      }
+
+      const resolution = resolutions.get(key) ?? "ignore";
+      if (resolution === "ignore") {
+        skipped++;
+      } else if (resolution === "override") {
+        await repo.replacePersonBundle(key, bundle);
+        imported++;
+      } else if (resolution === "merge") {
+        await repo.replacePersonBundle(key, mergePersonBundles(existingBundle, bundle));
+        mergedCount++;
+      }
+    }
+
+    await get().hydrate();
+    for (const person of get().people) {
+      await get().loadBundle(person.nameKey);
+    }
+    return { imported, merged: mergedCount, skipped };
+  },
+}));
