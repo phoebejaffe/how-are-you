@@ -15,7 +15,6 @@ export function EntryRow({
   archived = false,
   highlighted = false,
   compact = false,
-  topic = false,
   disclosureCollapsed = false,
   disclosureCount,
   onRowClick,
@@ -30,7 +29,6 @@ export function EntryRow({
   archived?: boolean;
   highlighted?: boolean;
   compact?: boolean;
-  topic?: boolean;
   disclosureCollapsed?: boolean;
   disclosureCount?: number;
   onRowClick?: () => void;

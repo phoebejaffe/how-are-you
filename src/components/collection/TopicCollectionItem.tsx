@@ -102,7 +102,6 @@ export function TopicCollectionItem({
         pinned={topic.pinned}
         archived={archived}
         highlighted={topicHighlighted}
-        topicSpacing
         features={{
           ...TOPIC_ITEM_FEATURES,
           pin: !archived,

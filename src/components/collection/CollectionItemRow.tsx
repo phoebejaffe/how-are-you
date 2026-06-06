@@ -16,7 +16,6 @@ export function CollectionItemRow({
   archived = false,
   highlighted = false,
   compact = false,
-  topicSpacing = false,
   features,
   menuActions,
   folders,
@@ -40,7 +39,6 @@ export function CollectionItemRow({
   archived?: boolean;
   highlighted?: boolean;
   compact?: boolean;
-  topicSpacing?: boolean;
   features: CollectionItemFeatures;
   menuActions: CollectionItemMenuActions;
   folders?: CollectionFolderRef[];
@@ -114,7 +112,6 @@ export function CollectionItemRow({
       archived={archived}
       highlighted={highlighted}
       compact={compact}
-      topic={topicSpacing}
       disclosureCollapsed={disclosureCollapsed}
       disclosureCount={disclosureCount}
       onRowClick={onRowClick}
