@@ -43,6 +43,7 @@ export function PersonPage() {
   const [nameError, setNameError] = useState("");
   const [topicText, setTopicText] = useState("");
   const [topicChannel, setTopicChannel] = useState<Channel>("call");
+  const [addingTopic, setAddingTopic] = useState(false);
   const [showArchived, setShowArchived] = useState(true);
   const [clusterAnchorIso, setClusterAnchorIso] = useState<string | null>(null);
 
@@ -184,28 +185,53 @@ export function PersonPage() {
         </section>
       )}
 
-      <form
-        className="mb-4 flex flex-wrap items-center gap-1"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void addTopic(nameKey, topicText, topicChannel);
-          setTopicText("");
-        }}
-      >
-        <input
-          value={topicText}
-          onChange={(e) => setTopicText(e.target.value)}
-          placeholder="Record a new topic"
-          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-        />
-        <ChannelPicker value={topicChannel} onChange={setTopicChannel} />
-        <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-          Add
-        </button>
-      </form>
-
       <section className="mb-3">
-        <h2 className="mb-1 px-2 text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
+        <div className="mb-1 flex items-baseline gap-2 px-2">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
+          {!addingTopic && (
+            <button
+              type="button"
+              onClick={() => setAddingTopic(true)}
+              className="text-xs text-stone-400 hover:text-stone-600 hover:underline"
+            >
+              add a topic
+            </button>
+          )}
+        </div>
+        {addingTopic && (
+          <form
+            className="my-1 flex flex-wrap items-center gap-1 px-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void addTopic(nameKey, topicText, topicChannel);
+              setTopicText("");
+              setAddingTopic(false);
+            }}
+          >
+            <input
+              value={topicText}
+              onChange={(e) => setTopicText(e.target.value)}
+              placeholder="add a topic"
+              className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+              autoFocus
+            />
+            <ChannelPicker value={topicChannel} onChange={setTopicChannel} />
+            <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTopicText("");
+                setAddingTopic(false);
+              }}
+              aria-label="Cancel"
+              className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+            >
+              X
+            </button>
+          </form>
+        )}
         <div className="rounded-lg bg-white/40 px-1 py-1">
           {[...visibleTopics.pinnedActive, ...visibleTopics.active].length === 0 && (
             <p className="px-2 py-3 text-center text-xs text-stone-400">No active topics.</p>
