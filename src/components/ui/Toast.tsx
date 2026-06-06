@@ -37,7 +37,7 @@ export function ToastContainer() {
                     toast.action?.onClick();
                     remove(toast.id);
                   }}
-                  className="shrink-0 rounded px-2 py-0.5 text-xs font-semibold underline underline-offset-2"
+                  className="shrink-0 cursor-pointer rounded px-2 py-0.5 text-xs font-semibold underline underline-offset-2"
                 >
                   {toast.action.label}
                 </button>

@@ -64,6 +64,7 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
     ...existing.topics.map((t) => t.id),
     ...existing.followUps.map((f) => f.id),
     ...existing.facts.map((f) => f.id),
+    ...(existing.factFolders ?? []).map((f) => f.id),
   ]);
 
   const importedTopics = remapIds(imported.topics, usedIds);
@@ -85,6 +86,18 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
   });
 
   const importedFacts = remapIds(imported.facts, usedIds);
+  const importedFolders = remapIds(imported.factFolders ?? [], usedIds);
+  const folderIdMap = new Map<string, string>();
+  (imported.factFolders ?? []).forEach((folder, i) => {
+    if (folder.id !== importedFolders[i].id) {
+      folderIdMap.set(folder.id, importedFolders[i].id);
+    }
+  });
+
+  const remappedImportedFacts = importedFacts.map((fact) => {
+    if (!fact.folderId) return fact;
+    return { ...fact, folderId: folderIdMap.get(fact.folderId) ?? fact.folderId };
+  });
 
   return {
     person: {
@@ -94,7 +107,8 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
     },
     topics: [...existing.topics, ...importedTopics],
     followUps: [...existing.followUps, ...importedFollowUps],
-    facts: [...existing.facts, ...importedFacts],
+    facts: [...existing.facts, ...remappedImportedFacts],
+    factFolders: [...(existing.factFolders ?? []), ...importedFolders],
   };
 }
 

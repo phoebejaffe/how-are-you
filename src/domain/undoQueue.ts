@@ -1,4 +1,4 @@
-import type { Fact, PersonBundle, Topic } from "../types";
+import type { Fact, FollowUp, PersonBundle, Topic } from "../types";
 
 export const UNDO_MS = 10_000;
 const PERSIST_KEY = "how-are-you-pending-undo";
@@ -7,6 +7,7 @@ export type UndoActionType =
   | "delete_person"
   | "delete_topic"
   | "delete_fact"
+  | "delete_follow_up"
   | "archive_topic";
 
 export interface UndoAction {
@@ -19,8 +20,9 @@ export interface UndoAction {
 
 export type UndoSnapshot =
   | { type: "person"; bundle: PersonBundle }
-  | { type: "topic"; topic: Topic; followUps: import("../types").FollowUp[] }
+  | { type: "topic"; topic: Topic; followUps: FollowUp[] }
   | { type: "fact"; fact: Fact }
+  | { type: "follow_up"; followUp: FollowUp }
   | { type: "archive_topic"; topic: Topic };
 
 type PersistedUndo = Omit<UndoAction, "id"> & { id: string };

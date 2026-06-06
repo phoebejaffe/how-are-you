@@ -15,6 +15,7 @@ import * as repo from "../storage/repository";
 import type {
   Channel,
   Fact,
+  FactFolder,
   FollowUp,
   ImportConflictResolution,
   Person,
@@ -30,6 +31,7 @@ interface AppState {
   pendingDeletes: Set<string>;
   pendingTopicDeletes: Set<string>;
   pendingFactDeletes: Set<string>;
+  pendingFollowUpDeletes: Set<string>;
   pendingArchives: Set<string>;
   hydrate: () => Promise<void>;
   refreshPeople: () => Promise<void>;
@@ -44,10 +46,16 @@ interface AppState {
   updateTopic: (topicId: string, text: string, channel: Channel) => Promise<void>;
   addFollowUp: (topicId: string, text: string, channel: Channel) => Promise<void>;
   updateFollowUp: (followUpId: string, text: string, channel: Channel) => Promise<void>;
-  addFact: (nameKey: string, text: string, channel: Channel, pinned?: boolean) => Promise<void>;
+  scheduleDeleteFollowUp: (followUpId: string) => Promise<void>;
+  addFact: (nameKey: string, text: string, channel: Channel, pinned?: boolean, folderId?: string) => Promise<void>;
   updateFact: (factId: string, text: string, channel: Channel) => Promise<void>;
   toggleFactPin: (factId: string) => Promise<void>;
+  moveFactToFolder: (factId: string, folderId: string | null) => Promise<void>;
   scheduleDeleteFact: (factId: string) => Promise<void>;
+  addFactFolder: (nameKey: string, name: string) => Promise<void>;
+  renameFactFolder: (folderId: string, name: string) => Promise<void>;
+  deleteFactFolder: (folderId: string) => Promise<void>;
+  toggleFactFolderCollapsed: (folderId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
@@ -76,6 +84,13 @@ function bundleKeyForFact(bundles: Record<string, PersonBundle>, factId: string)
   return null;
 }
 
+function bundleKeyForFactFolder(bundles: Record<string, PersonBundle>, folderId: string): string | null {
+  for (const [key, bundle] of Object.entries(bundles)) {
+    if (bundle.factFolders?.some((f) => f.id === folderId)) return key;
+  }
+  return null;
+}
+
 function bundleKeyForFollowUp(bundles: Record<string, PersonBundle>, followUpId: string): string | null {
   for (const [key, bundle] of Object.entries(bundles)) {
     if (bundle.followUps.some((f) => f.id === followUpId)) return key;
@@ -98,6 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   pendingDeletes: new Set(),
   pendingTopicDeletes: new Set(),
   pendingFactDeletes: new Set(),
+  pendingFollowUpDeletes: new Set(),
   pendingArchives: new Set(),
 
   async hydrate() {
@@ -114,7 +130,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   async loadBundle(nameKey) {
     const bundle = await repo.getPersonBundle(nameKey);
     if (bundle) {
-      set((state) => ({ bundles: { ...state.bundles, [nameKey]: bundle } }));
+      const normalized = { ...bundle, factFolders: bundle.factFolders ?? [] };
+      set((state) => ({ bundles: { ...state.bundles, [nameKey]: normalized } }));
+      return normalized;
     }
     return bundle;
   },
@@ -153,6 +171,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           person: { ...nextBundles[oldKey].person, nameKey: result.newKey, displayName: newDisplayName.trim() },
           topics: nextBundles[oldKey].topics.map((t) => ({ ...t, personNameKey: result.newKey })),
           facts: nextBundles[oldKey].facts.map((f) => ({ ...f, personNameKey: result.newKey })),
+          factFolders: (nextBundles[oldKey].factFolders ?? []).map((f) => ({ ...f, personNameKey: result.newKey })),
         };
         delete nextBundles[oldKey];
       }
@@ -362,7 +381,51 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().loadBundle(personKey);
   },
 
-  async addFact(nameKey, text, channel, pinned = false) {
+  async scheduleDeleteFollowUp(followUpId) {
+    const personKey = bundleKeyForFollowUp(get().bundles, followUpId);
+    if (!personKey) return;
+    const followUp = get().bundles[personKey].followUps.find((f) => f.id === followUpId);
+    if (!followUp) return;
+
+    const action = createUndoAction("delete_follow_up", "Follow-up deleted", {
+      type: "follow_up",
+      followUp,
+    });
+    persistUndo(action);
+
+    set((state) => ({
+      pendingFollowUpDeletes: new Set(state.pendingFollowUpDeletes).add(followUpId),
+    }));
+
+    const commit = async () => {
+      clearPersistedUndo(action.id);
+      if (!get().pendingFollowUpDeletes.has(followUpId)) return;
+      await repo.deleteFollowUpHard(followUpId);
+      set((state) => {
+        const pendingFollowUpDeletes = new Set(state.pendingFollowUpDeletes);
+        pendingFollowUpDeletes.delete(followUpId);
+        return { pendingFollowUpDeletes };
+      });
+      await get().loadBundle(personKey);
+    };
+
+    const undo = async () => {
+      clearPersistedUndo(action.id);
+      set((state) => {
+        const pendingFollowUpDeletes = new Set(state.pendingFollowUpDeletes);
+        pendingFollowUpDeletes.delete(followUpId);
+        return { pendingFollowUpDeletes };
+      });
+      await get().undoAction(action);
+    };
+
+    showUndoToast(action, undo, commit);
+    setTimeout(() => {
+      if (get().pendingFollowUpDeletes.has(followUpId)) commit();
+    }, UNDO_MS);
+  },
+
+  async addFact(nameKey, text, channel, pinned = false, folderId) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const fact: Fact = {
@@ -372,6 +435,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       pinned,
       recordedAtIso: nowIso(),
       channel,
+      ...(folderId ? { folderId } : {}),
     };
     await repo.saveFact(fact);
     await get().loadBundle(nameKey);
@@ -394,6 +458,73 @@ export const useAppStore = create<AppState>((set, get) => ({
     const fact = get().bundles[personKey].facts.find((f) => f.id === factId);
     if (!fact) return;
     await repo.saveFact({ ...fact, pinned: !fact.pinned });
+    await get().loadBundle(personKey);
+  },
+
+  async moveFactToFolder(factId, folderId) {
+    const personKey = bundleKeyForFact(get().bundles, factId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const fact = bundle.facts.find((f) => f.id === factId);
+    if (!fact) return;
+    if (folderId && !bundle.factFolders.some((f) => f.id === folderId)) return;
+
+    const next = { ...fact };
+    if (folderId) next.folderId = folderId;
+    else delete next.folderId;
+
+    await repo.saveFact(next);
+    await get().loadBundle(personKey);
+  },
+
+  async addFactFolder(nameKey, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const bundle = (await get().loadBundle(nameKey)) ?? get().bundles[nameKey];
+    const folders = bundle?.factFolders ?? [];
+    const maxOrder = folders.reduce((max, folder) => Math.max(max, folder.sortOrder), -1);
+    const folder: FactFolder = {
+      id: createId(),
+      personNameKey: nameKey,
+      name: trimmed,
+      collapsed: false,
+      sortOrder: maxOrder + 1,
+    };
+    await repo.saveFactFolder(folder);
+    await get().loadBundle(nameKey);
+  },
+
+  async renameFactFolder(folderId, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForFactFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const folder = get().bundles[personKey].factFolders.find((f) => f.id === folderId);
+    if (!folder) return;
+    await repo.saveFactFolder({ ...folder, name: trimmed });
+    await get().loadBundle(personKey);
+  },
+
+  async deleteFactFolder(folderId) {
+    const personKey = bundleKeyForFactFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const factsInFolder = bundle.facts.filter((f) => f.folderId === folderId);
+    for (const fact of factsInFolder) {
+      const next = { ...fact };
+      delete next.folderId;
+      await repo.saveFact(next);
+    }
+    await repo.deleteFactFolderHard(folderId);
+    await get().loadBundle(personKey);
+  },
+
+  async toggleFactFolderCollapsed(folderId) {
+    const personKey = bundleKeyForFactFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const folder = get().bundles[personKey].factFolders.find((f) => f.id === folderId);
+    if (!folder) return;
+    await repo.saveFactFolder({ ...folder, collapsed: !folder.collapsed });
     await get().loadBundle(personKey);
   },
 
@@ -453,6 +584,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else if (snapshot.type === "fact") {
       await repo.saveFact(snapshot.fact);
       await get().loadBundle(snapshot.fact.personNameKey);
+    } else if (snapshot.type === "follow_up") {
+      await repo.saveFollowUp(snapshot.followUp);
+      const personKey = bundleKeyForTopic(get().bundles, snapshot.followUp.topicId);
+      if (personKey) await get().loadBundle(personKey);
     } else if (snapshot.type === "archive_topic") {
       await repo.saveTopic(snapshot.topic);
       await get().loadBundle(snapshot.topic.personNameKey);
@@ -470,6 +605,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else if (snapshot.type === "fact") {
       await repo.deleteFactHard(snapshot.fact.id);
       await get().loadBundle(snapshot.fact.personNameKey);
+    } else if (snapshot.type === "follow_up") {
+      await repo.deleteFollowUpHard(snapshot.followUp.id);
+      const personKey = bundleKeyForTopic(get().bundles, snapshot.followUp.topicId);
+      if (personKey) await get().loadBundle(personKey);
     }
   },
 
@@ -494,6 +633,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       } else if (snapshot.type === "fact") {
         set((state) => ({
           pendingFactDeletes: new Set(state.pendingFactDeletes).add(snapshot.fact.id),
+        }));
+      } else if (snapshot.type === "follow_up") {
+        set((state) => ({
+          pendingFollowUpDeletes: new Set(state.pendingFollowUpDeletes).add(snapshot.followUp.id),
         }));
       } else if (snapshot.type === "archive_topic") {
         set((state) => ({

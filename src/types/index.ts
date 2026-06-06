@@ -34,6 +34,15 @@ export interface Fact {
   pinned: boolean;
   recordedAtIso: string;
   channel: Channel;
+  folderId?: string;
+}
+
+export interface FactFolder {
+  id: string;
+  personNameKey: string;
+  name: string;
+  collapsed: boolean;
+  sortOrder: number;
 }
 
 export interface PersonBundle {
@@ -41,6 +50,7 @@ export interface PersonBundle {
   topics: Topic[];
   followUps: FollowUp[];
   facts: Fact[];
+  factFolders: FactFolder[];
 }
 
 export interface ExportPayload {

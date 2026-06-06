@@ -16,6 +16,11 @@ export function TopicRow({
   onEdit,
   onAddFollowUp,
   onEditFollowUp,
+  onDeleteFollowUp,
+  pendingFollowUpDeletes,
+  topicHighlighted = false,
+  followUpHighlighted,
+  onClusterSelect,
 }: {
   topic: Topic;
   followUps: FollowUp[];
@@ -26,6 +31,11 @@ export function TopicRow({
   onEdit: (text: string, channel: Channel) => void;
   onAddFollowUp: (text: string, channel: Channel) => void;
   onEditFollowUp: (followUpId: string, text: string, channel: Channel) => void;
+  onDeleteFollowUp: (followUpId: string) => void;
+  pendingFollowUpDeletes: Set<string>;
+  topicHighlighted?: boolean;
+  followUpHighlighted?: (followUpId: string) => boolean;
+  onClusterSelect?: (timestampIso: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
@@ -33,14 +43,15 @@ export function TopicRow({
   const [followUpChannel, setFollowUpChannel] = useState<Channel>("call");
   const [addingFollowUp, setAddingFollowUp] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteFollowUpId, setConfirmDeleteFollowUpId] = useState<string | null>(null);
   const [showAllFollowUps, setShowAllFollowUps] = useState(false);
 
   const topicFollowUps = useMemo(
     () =>
       followUps
-        .filter((f) => f.topicId === topic.id)
+        .filter((f) => f.topicId === topic.id && !pendingFollowUpDeletes.has(f.id))
         .sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso)),
-    [followUps, topic.id],
+    [followUps, topic.id, pendingFollowUpDeletes],
   );
   const showFollowUps = topicFollowUps.length > 0 || !archived;
   const needsFollowUpCollapse = topicFollowUps.length > 5;
@@ -62,7 +73,10 @@ export function TopicRow({
   }, [archived, onArchive, onPin, topic.pinned]);
 
   function followUpMenuItems(followUpId: string): RowMenuItem[] {
-    return [{ label: "Edit", onClick: () => setEditingFollowUpId(followUpId) }];
+    return [
+      { label: "Edit", onClick: () => setEditingFollowUpId(followUpId) },
+      { label: "Delete", onClick: () => setConfirmDeleteFollowUpId(followUpId), destructive: true },
+    ];
   }
 
   if (editing) {
@@ -90,6 +104,8 @@ export function TopicRow({
         pinned={topic.pinned}
         menuItems={topicMenuItems}
         archived={archived}
+        highlighted={topicHighlighted}
+        onClusterSelect={onClusterSelect}
       />
 
       {showFollowUps && (
@@ -134,6 +150,8 @@ export function TopicRow({
                 channel={f.channel}
                 menuItems={followUpMenuItems(f.id)}
                 archived={archived}
+                highlighted={followUpHighlighted?.(f.id) ?? false}
+                onClusterSelect={onClusterSelect}
               />
             ),
           )}
@@ -193,6 +211,17 @@ export function TopicRow({
           onDelete();
         }}
         onCancel={() => setConfirmDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteFollowUpId !== null}
+        title="Delete follow-up?"
+        message="This follow-up will be permanently removed."
+        onConfirm={() => {
+          if (confirmDeleteFollowUpId) onDeleteFollowUp(confirmDeleteFollowUpId);
+          setConfirmDeleteFollowUpId(null);
+        }}
+        onCancel={() => setConfirmDeleteFollowUpId(null)}
       />
     </>
   );

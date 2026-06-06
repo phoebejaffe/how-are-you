@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FactRow } from "../components/person/FactRow";
+import { FactsSection } from "../components/person/FactsSection";
 import { TopicRow } from "../components/person/TopicRow";
 import { ChannelPicker } from "../components/ui/ChannelPicker";
+import { computeTimeCluster } from "../lib/timeCluster";
 import type { Channel } from "../types";
 import { useAppStore } from "../store/appStore";
 
@@ -13,6 +15,7 @@ export function PersonPage() {
   const bundle = useAppStore((s) => s.bundles[nameKey]);
   const pendingTopicDeletes = useAppStore((s) => s.pendingTopicDeletes);
   const pendingFactDeletes = useAppStore((s) => s.pendingFactDeletes);
+  const pendingFollowUpDeletes = useAppStore((s) => s.pendingFollowUpDeletes);
   const loadBundle = useAppStore((s) => s.loadBundle);
   const renamePerson = useAppStore((s) => s.renamePerson);
   const addTopic = useAppStore((s) => s.addTopic);
@@ -23,21 +26,53 @@ export function PersonPage() {
   const updateTopic = useAppStore((s) => s.updateTopic);
   const addFollowUp = useAppStore((s) => s.addFollowUp);
   const updateFollowUp = useAppStore((s) => s.updateFollowUp);
+  const scheduleDeleteFollowUp = useAppStore((s) => s.scheduleDeleteFollowUp);
   const updateFact = useAppStore((s) => s.updateFact);
   const toggleFactPin = useAppStore((s) => s.toggleFactPin);
   const scheduleDeleteFact = useAppStore((s) => s.scheduleDeleteFact);
+  const moveFactToFolder = useAppStore((s) => s.moveFactToFolder);
+  const addFactFolder = useAppStore((s) => s.addFactFolder);
+  const renameFactFolder = useAppStore((s) => s.renameFactFolder);
+  const deleteFactFolder = useAppStore((s) => s.deleteFactFolder);
+  const toggleFactFolderCollapsed = useAppStore((s) => s.toggleFactFolderCollapsed);
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState("");
   const [topicText, setTopicText] = useState("");
   const [topicChannel, setTopicChannel] = useState<Channel>("call");
-  const [factText, setFactText] = useState("");
   const [showArchived, setShowArchived] = useState(true);
+  const [clusterAnchorIso, setClusterAnchorIso] = useState<string | null>(null);
 
   useEffect(() => {
     if (nameKey) void loadBundle(nameKey);
   }, [nameKey, loadBundle]);
+
+  useEffect(() => {
+    setClusterAnchorIso(null);
+  }, [nameKey]);
+
+  useEffect(() => {
+    if (!clusterAnchorIso) return;
+    function handlePointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-time-cluster-trigger]")) return;
+      setClusterAnchorIso(null);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [clusterAnchorIso]);
+
+  const timeCluster = useMemo(() => {
+    if (!bundle || !clusterAnchorIso) {
+      return { topicIds: new Set<string>(), followUpIds: new Set<string>() };
+    }
+    return computeTimeCluster(bundle, clusterAnchorIso, pendingTopicDeletes, pendingFollowUpDeletes);
+  }, [bundle, clusterAnchorIso, pendingTopicDeletes, pendingFollowUpDeletes]);
+
+  const handleClusterSelect = useCallback((iso: string) => {
+    setClusterAnchorIso((current) => (current === iso ? null : iso));
+  }, []);
 
   useEffect(() => {
     if (bundle) setNameInput(bundle.person.displayName);
@@ -136,9 +171,11 @@ export function PersonPage() {
             <FactRow
               key={fact.id}
               fact={fact}
+              folders={bundle.factFolders ?? []}
               onPin={() => void toggleFactPin(fact.id)}
               onDelete={() => void scheduleDeleteFact(fact.id)}
               onEdit={(text, ch) => void updateFact(fact.id, text, ch)}
+              onMoveToFolder={(folderId) => void moveFactToFolder(fact.id, folderId)}
             />
           ))}
         </section>
@@ -165,7 +202,7 @@ export function PersonPage() {
       </form>
 
       <section className="mb-3">
-        <h2 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-stone-500">Topics</h2>
+        <h2 className="mb-1 px-2 text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
         <div className="rounded-lg bg-white/40 px-1 py-1">
           {[...visibleTopics.pinnedActive, ...visibleTopics.active].length === 0 && (
             <p className="px-2 py-3 text-center text-xs text-stone-400">No active topics.</p>
@@ -175,12 +212,17 @@ export function PersonPage() {
               key={topic.id}
               topic={topic}
               followUps={bundle.followUps}
+              topicHighlighted={timeCluster.topicIds.has(topic.id)}
+              followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+              onClusterSelect={handleClusterSelect}
               onPin={() => void toggleTopicPin(topic.id)}
               onArchive={() => void scheduleArchiveTopic(topic.id)}
               onDelete={() => void scheduleDeleteTopic(topic.id)}
               onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
               onAddFollowUp={(text, ch) => void addFollowUp(topic.id, text, ch)}
               onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+              onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+              pendingFollowUpDeletes={pendingFollowUpDeletes}
             />
           ))}
           {visibleTopics.active.map((topic) => (
@@ -188,52 +230,35 @@ export function PersonPage() {
               key={topic.id}
               topic={topic}
               followUps={bundle.followUps}
+              topicHighlighted={timeCluster.topicIds.has(topic.id)}
+              followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+              onClusterSelect={handleClusterSelect}
               onPin={() => void toggleTopicPin(topic.id)}
               onArchive={() => void scheduleArchiveTopic(topic.id)}
               onDelete={() => void scheduleDeleteTopic(topic.id)}
               onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
               onAddFollowUp={(text, ch) => void addFollowUp(topic.id, text, ch)}
               onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+              onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+              pendingFollowUpDeletes={pendingFollowUpDeletes}
             />
           ))}
         </div>
       </section>
 
-      <section className="mb-3">
-        <h2 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-stone-500">Facts</h2>
-        <form
-          className="mb-2 flex gap-1 px-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void addFact(nameKey, factText, "text");
-            setFactText("");
-          }}
-        >
-          <input
-            value={factText}
-            onChange={(e) => setFactText(e.target.value)}
-            placeholder="Add a fact…"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-          />
-          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-            Add
-          </button>
-        </form>
-        <div className="rounded-lg bg-white/40 px-1 py-1">
-          {unpinnedFacts.length === 0 && (
-            <p className="px-2 py-2 text-center text-xs text-stone-400">No facts yet.</p>
-          )}
-          {unpinnedFacts.map((fact) => (
-            <FactRow
-              key={fact.id}
-              fact={fact}
-              onPin={() => void toggleFactPin(fact.id)}
-              onDelete={() => void scheduleDeleteFact(fact.id)}
-              onEdit={(text, ch) => void updateFact(fact.id, text, ch)}
-            />
-          ))}
-        </div>
-      </section>
+      <FactsSection
+        folders={bundle.factFolders ?? []}
+        unpinnedFacts={unpinnedFacts}
+        onAddFact={(text, folderId) => void addFact(nameKey, text, "text", false, folderId)}
+        onPin={(factId) => void toggleFactPin(factId)}
+        onDeleteFact={(factId) => void scheduleDeleteFact(factId)}
+        onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
+        onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
+        onAddFolder={(name) => void addFactFolder(nameKey, name)}
+        onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
+        onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
+        onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
+      />
 
       <section>
         <button
@@ -252,12 +277,17 @@ export function PersonPage() {
                 topic={topic}
                 followUps={bundle.followUps}
                 archived
+                topicHighlighted={timeCluster.topicIds.has(topic.id)}
+                followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+                onClusterSelect={handleClusterSelect}
                 onPin={() => void toggleTopicPin(topic.id)}
                 onArchive={() => {}}
                 onDelete={() => void scheduleDeleteTopic(topic.id)}
                 onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
                 onAddFollowUp={() => {}}
                 onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+                onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+                pendingFollowUpDeletes={pendingFollowUpDeletes}
               />
             ))}
           </div>

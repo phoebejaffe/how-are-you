@@ -24,6 +24,7 @@ function makeBundle(name: string, topicId = "t1"): PersonBundle {
     ],
     followUps: [],
     facts: [],
+    factFolders: [],
   };
 }
 
