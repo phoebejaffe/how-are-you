@@ -175,7 +175,14 @@ export function FactFolderSection({
               <span className="truncate">
                 {folder.name} ({facts.length})
               </span>
-              <span className="shrink-0 pl-2">{folder.collapsed ? "▸" : "▾"}</span>
+              {folder.collapsed && (
+                <span
+                  className="relative inline-flex shrink-0 -top-0.5 items-center justify-center pl-2 text-[16px] leading-none text-stone-500"
+                  aria-hidden="true"
+                >
+                  <span className="inline-block rotate-180">^</span>
+                </span>
+              )}
             </button>
             <RowMenu items={menuItems} />
           </>
