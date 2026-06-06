@@ -77,20 +77,15 @@ export function FolderHeader({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="flex min-h-10 min-w-0 flex-1 cursor-pointer touch-none select-none items-center justify-between rounded px-1 text-left text-xs font-semibold text-stone-600 active:text-stone-800"
+            className="flex min-h-10 min-w-0 flex-1 cursor-pointer touch-none select-none items-center gap-2 rounded px-1 text-left text-xs font-bold text-stone-600 active:text-stone-800"
             {...sortableHandleProps}
           >
-            <span className="truncate">
-              {name} ({count})
+            <span className="flex min-w-0 flex-1 items-baseline">
+              <span className="truncate">{name}</span>
+              {collapsed && (
+                <span className="ml-1.5 shrink-0 text-xs tabular-nums text-stone-500">({count})</span>
+              )}
             </span>
-            {collapsed && (
-              <span
-                className="relative inline-flex shrink-0 -top-0.5 items-center justify-center pl-2 text-[16px] leading-none text-stone-500"
-                aria-hidden="true"
-              >
-                <span className="inline-block rotate-180">^</span>
-              </span>
-            )}
           </button>
           <div onPointerDown={(e) => e.stopPropagation()}>
             <RowMenu items={menuItems} />
@@ -117,10 +112,11 @@ export function UnsortedFolderHeader({
       className={`flex items-center gap-1 px-1 ${isFolderReorderTarget ? "rounded ring-2 ring-amber-400/80" : ""}`}
     >
       <div
-        className="min-w-0 flex-1 touch-none select-none truncate px-1 py-0.5 text-xs font-semibold text-stone-500"
+        className="flex min-w-0 flex-1 touch-none select-none items-center gap-2 px-1 py-0.5 text-xs font-bold text-stone-500"
         {...sortableHandleProps}
       >
-        {label} ({count})
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="ml-1.5 shrink-0 tabular-nums">({count})</span>
       </div>
     </div>
   );

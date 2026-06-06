@@ -23,6 +23,7 @@ import {
   savePeopleLayoutOrder,
 } from "../lib/peopleFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
+import { nextSortOrderForTopic, topicsAfterReorder } from "../lib/topicOrder";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
@@ -60,6 +61,7 @@ interface AppState {
   unarchiveTopic: (topicId: string) => Promise<void>;
   scheduleDeleteTopic: (topicId: string) => Promise<void>;
   toggleTopicPin: (topicId: string) => Promise<void>;
+  reorderTopics: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
   updateTopic: (topicId: string, text: string, channel: Channel) => Promise<void>;
   addFollowUp: (topicId: string, text: string, channel: Channel) => Promise<void>;
   updateFollowUp: (followUpId: string, text: string, channel: Channel) => Promise<void>;
@@ -284,12 +286,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   async addTopic(nameKey, text, channel) {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const bundle = get().bundles[nameKey];
     const topic: Topic = {
       id: createId(),
       personNameKey: nameKey,
       text: trimmed,
       status: "active",
       pinned: false,
+      sortOrder: nextSortOrderForTopic(bundle?.topics ?? [], false),
       createdAtIso: nowIso(),
       channel,
     };
@@ -349,7 +353,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!personKey) return;
     const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
     if (!topic || topic.status !== "archived") return;
-    await repo.saveTopic({ ...topic, status: "active" });
+    const bundle = get().bundles[personKey];
+    const sortOrder = nextSortOrderForTopic(bundle.topics, false);
+    await repo.saveTopic({ ...topic, status: "active", sortOrder });
     await get().loadBundle(personKey);
   },
 
@@ -404,9 +410,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   async toggleTopicPin(topicId) {
     const personKey = bundleKeyForTopic(get().bundles, topicId);
     if (!personKey) return;
-    const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
+    const bundle = get().bundles[personKey];
+    const topic = bundle.topics.find((t) => t.id === topicId);
     if (!topic) return;
-    await repo.saveTopic({ ...topic, pinned: !topic.pinned });
+    const pinned = !topic.pinned;
+    const sortOrder = nextSortOrderForTopic(bundle.topics, pinned);
+    await repo.saveTopic({ ...topic, pinned, sortOrder });
+    await get().loadBundle(personKey);
+  },
+
+  async reorderTopics(personKey, draggedId, targetId) {
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
+    const toSave = topicsAfterReorder(bundle.topics, draggedId, targetId);
+    if (!toSave) return;
+    for (const topic of toSave) {
+      await repo.saveTopic(topic);
+    }
     await get().loadBundle(personKey);
   },
 

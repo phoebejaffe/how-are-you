@@ -1,16 +1,5 @@
 import type { ActivityType, Fact, FollowUp, Person, Topic } from "../types";
 
-export function activityTypeLabel(type: ActivityType): string {
-  switch (type) {
-    case "topic":
-      return "topic";
-    case "follow_up":
-      return "follow-up";
-    case "fact":
-      return "fact";
-  }
-}
-
 export function computeLastActivityFromData({
   topics,
   followUps,

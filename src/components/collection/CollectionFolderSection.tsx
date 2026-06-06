@@ -1,36 +1,27 @@
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
-import type { Channel, Fact, FactFolder } from "../../types";
+import { useState, type ReactNode } from "react";
+import type { BaseFolder } from "../../lib/folders";
 import { folderDropId, folderSortId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { FolderHeader } from "../folders/FolderHeader";
 import { mergeRefs } from "../dnd/mergeRefs";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { FactRow } from "./FactRow";
 
-export function FactFolderSection({
+export function CollectionFolderSection({
   folder,
-  facts,
-  allFolders,
+  itemCount,
+  children,
   onToggleCollapsed,
   onRename,
   onDelete,
-  onPin,
-  onDeleteFact,
-  onEdit,
-  onMoveToFolder,
 }: {
-  folder: FactFolder;
-  facts: Fact[];
-  allFolders: FactFolder[];
+  folder: BaseFolder;
+  itemCount: number;
+  children: ReactNode;
   onToggleCollapsed: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
-  onPin: (factId: string) => void;
-  onDeleteFact: (factId: string) => void;
-  onEdit: (factId: string, text: string, channel: Channel) => void;
-  onMoveToFolder: (factId: string, folderId: string | null) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -59,7 +50,7 @@ export function FactFolderSection({
     >
       <FolderHeader
         name={folder.name}
-        count={facts.length}
+        count={itemCount}
         collapsed={folder.collapsed}
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         onToggleCollapsed={onToggleCollapsed}
@@ -68,24 +59,12 @@ export function FactFolderSection({
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
       />
 
-      {!folder.collapsed &&
-        facts.map((fact) => (
-          <FactRow
-            key={fact.id}
-            fact={fact}
-            folders={allFolders}
-            draggable
-            onPin={() => onPin(fact.id)}
-            onDelete={() => onDeleteFact(fact.id)}
-            onEdit={(text, ch) => onEdit(fact.id, text, ch)}
-            onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
-          />
-        ))}
+      {!folder.collapsed && <div className="pl-3">{children}</div>}
 
       <ConfirmDialog
         open={confirmDelete}
         title="Delete folder?"
-        message="Facts in this folder will be moved to Unsorted, not deleted."
+        message="Items in this folder will be moved to Unsorted, not deleted."
         onConfirm={() => {
           setConfirmDelete(false);
           onDelete();

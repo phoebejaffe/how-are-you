@@ -3,7 +3,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { personDragId, type PersonDragData } from "../dnd/dndIds";
-import { activityTypeLabel } from "../../lib/lastActivity";
 import type { Person } from "../../types";
 import { RelativeTime } from "../ui/RelativeTime";
 import { RowMenu } from "../ui/RowMenu";
@@ -46,11 +45,6 @@ export function PersonListRow({
     [onDelete],
   );
 
-  const activityLabel =
-    person.lastActivityAtIso && person.lastActivityType
-      ? `${activityTypeLabel(person.lastActivityType)} · `
-      : null;
-
   return (
     <div
       ref={setNodeRef}
@@ -70,7 +64,6 @@ export function PersonListRow({
           <span className="min-w-0 break-words font-medium text-stone-800">{person.displayName}</span>
           {person.lastActivityAtIso && (
             <span className="shrink-0 text-xs text-stone-400">
-              {activityLabel}
               <RelativeTime iso={person.lastActivityAtIso} />
             </span>
           )}

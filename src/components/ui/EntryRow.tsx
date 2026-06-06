@@ -17,6 +17,7 @@ export function EntryRow({
   compact = false,
   topic = false,
   disclosureCollapsed = false,
+  disclosureCount,
   onRowClick,
   onClusterSelect,
 }: {
@@ -31,6 +32,7 @@ export function EntryRow({
   compact?: boolean;
   topic?: boolean;
   disclosureCollapsed?: boolean;
+  disclosureCount?: number;
   onRowClick?: () => void;
   onClusterSelect?: (timestampIso: string) => void;
 }) {
@@ -56,8 +58,8 @@ export function EntryRow({
             }
           : undefined
       }
-      className={`flex items-start gap-2 rounded pl-2 text-sm transition-colors ${
-        compact ? "py-0.5" : topic ? "my-1 py-1" : "min-h-10 py-2"
+      className={`flex items-start gap-2 rounded pl-2 text-sm leading-snug transition-colors ${
+        compact ? "py-0.5" : topic ? "py-1" : "py-1"
       } ${
         highlighted
           ? "bg-amber-100/90 ring-1 ring-amber-300/80"
@@ -74,21 +76,18 @@ export function EntryRow({
           </span>
         )}
         {text}
-      </div>
-      <div className="flex shrink-0 items-center gap-2 pt-0.5">
-        {disclosureCollapsed && (
-          <span
-            className="relative inline-flex shrink-0 -top-0.5 items-center justify-center text-[16px] leading-none text-stone-500"
-            aria-hidden="true"
-          >
-            <span className="inline-block rotate-180">^</span>
+        {disclosureCollapsed && disclosureCount != null && (
+          <span className="ml-1.5 whitespace-nowrap text-xs tabular-nums text-stone-500">
+            ({disclosureCount})
           </span>
         )}
+      </div>
+      <div className="flex shrink-0 items-start gap-1 self-start pt-px">
         {onClusterSelect ? (
           <button
             type="button"
             data-time-cluster-trigger
-            className="flex min-h-10 cursor-pointer items-center gap-2 rounded border-0 bg-transparent px-1 active:bg-white/50"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded border-0 bg-transparent p-0 text-xs leading-none text-stone-400 active:bg-white/50"
             title={formatExactTime(timestampIso)}
             onClick={(e) => {
               e.stopPropagation();
@@ -98,16 +97,20 @@ export function EntryRow({
             {meta}
           </button>
         ) : (
-          <span className="flex items-center gap-2" title={formatExactTime(timestampIso)}>
+          <span
+            className="inline-flex items-center gap-1.5 text-xs leading-none text-stone-400"
+            title={formatExactTime(timestampIso)}
+          >
             {meta}
           </span>
         )}
         <div
+          className="-mr-1 -mt-0.5"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <RowMenu items={menuItems} />
+          <RowMenu items={menuItems} compact />
         </div>
       </div>
     </div>

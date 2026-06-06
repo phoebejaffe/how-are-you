@@ -46,7 +46,7 @@ export function UnsortedPeopleSection({
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
       />
-      <ul className="divide-y divide-stone-200/80">
+      <ul className="divide-y divide-stone-200/80 pl-4">
         {sortedPeople.map((person) => (
           <li key={person.nameKey}>
             <PersonListRow

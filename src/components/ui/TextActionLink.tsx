@@ -18,7 +18,7 @@ export function TextActionLink({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex min-h-10 items-center py-2 text-xs ${toneClass[tone]}`}
+      className={`block w-fit leading-none text-xs ${toneClass[tone]}`}
     >
       {children}
     </button>

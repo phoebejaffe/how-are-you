@@ -1,4 +1,5 @@
 import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
+import { withTopicSortOrders } from "../lib/topicOrder";
 import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, PersonBundle, Topic } from "../types";
 import { getDb } from "./db";
 
@@ -88,7 +89,15 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
 
   followUps.sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso));
 
-  return { person, topics, followUps, facts, factFolders };
+  const normalizedTopics = withTopicSortOrders(topics);
+  for (const topic of normalizedTopics) {
+    const prev = topics.find((t) => t.id === topic.id);
+    if (prev && prev.sortOrder !== topic.sortOrder) {
+      await db.put("topics", topic);
+    }
+  }
+
+  return { person, topics: normalizedTopics, followUps, facts, factFolders };
 }
 
 export async function listAllBundles(): Promise<PersonBundle[]> {

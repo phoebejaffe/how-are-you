@@ -27,6 +27,7 @@ export interface Topic {
   text: string;
   status: TopicStatus;
   pinned: boolean;
+  sortOrder: number;
   createdAtIso: string;
   channel: Channel;
 }

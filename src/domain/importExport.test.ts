@@ -18,6 +18,7 @@ function makeBundle(name: string, topicId = "t1"): PersonBundle {
         text: "How is work?",
         status: "active",
         pinned: false,
+        sortOrder: 0,
         createdAtIso: now,
         channel: "call",
       },

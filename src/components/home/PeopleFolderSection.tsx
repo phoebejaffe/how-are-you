@@ -62,7 +62,7 @@ export function PeopleFolderSection({
       />
 
       {!folder.collapsed && (
-        <ul className="divide-y divide-stone-200/80">
+        <ul className="divide-y divide-stone-200/80 pl-4">
           {sortedPeople.map((person) => (
             <li key={person.nameKey}>
               <PersonListRow

@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FactRow } from "../components/person/FactRow";
+import { FactCollectionItem } from "../components/collection/FactCollectionItem";
+import { TopicsSection } from "../components/collection/TopicsSection";
 import { FactsSection } from "../components/person/FactsSection";
-import { TopicRow } from "../components/person/TopicRow";
-import { ChannelPicker } from "../components/ui/ChannelPicker";
 import { RowMenu } from "../components/ui/RowMenu";
-import { SectionAddLink } from "../components/ui/SectionAddLink";
 import { computeTimeCluster } from "../lib/timeCluster";
-import type { Channel } from "../types";
+import { sortActiveTopics } from "../lib/topicOrder";
 import { useAppStore } from "../store/appStore";
 
 export function PersonPage() {
@@ -26,6 +24,7 @@ export function PersonPage() {
   const unarchiveTopic = useAppStore((s) => s.unarchiveTopic);
   const scheduleDeleteTopic = useAppStore((s) => s.scheduleDeleteTopic);
   const toggleTopicPin = useAppStore((s) => s.toggleTopicPin);
+  const reorderTopics = useAppStore((s) => s.reorderTopics);
   const updateTopic = useAppStore((s) => s.updateTopic);
   const addFollowUp = useAppStore((s) => s.addFollowUp);
   const updateFollowUp = useAppStore((s) => s.updateFollowUp);
@@ -43,10 +42,6 @@ export function PersonPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState("");
-  const [topicText, setTopicText] = useState("");
-  const [topicChannel, setTopicChannel] = useState<Channel>("call");
-  const [addingTopic, setAddingTopic] = useState(false);
-  const [showArchived, setShowArchived] = useState(true);
   const [clusterAnchorIso, setClusterAnchorIso] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,13 +79,12 @@ export function PersonPage() {
   }, [bundle]);
 
   const visibleTopics = useMemo(() => {
-    if (!bundle) return { pinnedActive: [], active: [], archived: [] };
+    if (!bundle) return { active: [], archived: [] };
     const topics = bundle.topics.filter((t) => !pendingTopicDeletes.has(t.id));
     const active = topics.filter((t) => t.status === "active");
     const archived = topics.filter((t) => t.status === "archived");
     return {
-      pinnedActive: active.filter((t) => t.pinned),
-      active: active.filter((t) => !t.pinned),
+      active: sortActiveTopics(active),
       archived,
     };
   }, [bundle, pendingTopicDeletes]);
@@ -173,7 +167,7 @@ export function PersonPage() {
         <section className="mb-3 rounded-lg bg-amber-50/80 px-2 py-1 ring-1 ring-amber-200/60">
           <h2 className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Pinned facts</h2>
           {pinnedFacts.map((fact) => (
-            <FactRow
+            <FactCollectionItem
               key={fact.id}
               fact={fact}
               folders={bundle.factFolders ?? []}
@@ -186,89 +180,25 @@ export function PersonPage() {
         </section>
       )}
 
-      <section className="mb-3">
-        <div className="mb-1 flex items-baseline gap-2 pr-2">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
-          {!addingTopic && (
-            <SectionAddLink onClick={() => setAddingTopic(true)}>add a topic</SectionAddLink>
-          )}
-        </div>
-        {addingTopic && (
-          <form
-            className="my-1 flex flex-wrap items-center gap-1 px-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void addTopic(nameKey, topicText, topicChannel);
-              setTopicText("");
-              setAddingTopic(false);
-            }}
-          >
-            <input
-              value={topicText}
-              onChange={(e) => setTopicText(e.target.value)}
-              placeholder="add a topic"
-              className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-              autoFocus
-            />
-            <ChannelPicker value={topicChannel} onChange={setTopicChannel} />
-            <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTopicText("");
-                setAddingTopic(false);
-              }}
-              aria-label="Cancel"
-              className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
-            >
-              X
-            </button>
-          </form>
-        )}
-        <div className="rounded-lg bg-white/40 px-1 py-1">
-          {[...visibleTopics.pinnedActive, ...visibleTopics.active].length === 0 && (
-            <p className="px-2 py-3 text-center text-xs text-stone-400">No active topics.</p>
-          )}
-          {visibleTopics.pinnedActive.map((topic) => (
-            <TopicRow
-              key={topic.id}
-              topic={topic}
-              followUps={bundle.followUps}
-              topicHighlighted={timeCluster.topicIds.has(topic.id)}
-              followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
-              onClusterSelect={handleClusterSelect}
-              onPin={() => void toggleTopicPin(topic.id)}
-              onArchive={() => void scheduleArchiveTopic(topic.id)}
-              onDelete={() => void scheduleDeleteTopic(topic.id)}
-              onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
-              onAddFollowUp={(text, ch) => void addFollowUp(topic.id, text, ch)}
-              onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
-              onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
-              pendingFollowUpDeletes={pendingFollowUpDeletes}
-            />
-          ))}
-          {visibleTopics.active.map((topic) => (
-            <TopicRow
-              key={topic.id}
-              topic={topic}
-              followUps={bundle.followUps}
-              topicHighlighted={timeCluster.topicIds.has(topic.id)}
-              followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
-              onClusterSelect={handleClusterSelect}
-              onPin={() => void toggleTopicPin(topic.id)}
-              onArchive={() => void scheduleArchiveTopic(topic.id)}
-              onDelete={() => void scheduleDeleteTopic(topic.id)}
-              onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
-              onAddFollowUp={(text, ch) => void addFollowUp(topic.id, text, ch)}
-              onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
-              onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
-              pendingFollowUpDeletes={pendingFollowUpDeletes}
-            />
-          ))}
-        </div>
-      </section>
+      <TopicsSection
+        topics={visibleTopics.active}
+        archivedTopics={visibleTopics.archived}
+        followUps={bundle.followUps}
+        pendingFollowUpDeletes={pendingFollowUpDeletes}
+        topicHighlighted={(id) => timeCluster.topicIds.has(id)}
+        followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+        onClusterSelect={handleClusterSelect}
+        onAddTopic={(text, channel) => void addTopic(nameKey, text, channel)}
+        onPin={(id) => void toggleTopicPin(id)}
+        onArchive={(id) => void scheduleArchiveTopic(id)}
+        onUnarchive={(id) => void unarchiveTopic(id)}
+        onDelete={(id) => void scheduleDeleteTopic(id)}
+        onEdit={(id, text, ch) => void updateTopic(id, text, ch)}
+        onAddFollowUp={(topicId, text, ch) => void addFollowUp(topicId, text, ch)}
+        onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+        onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+        onReorderTopics={(draggedId, targetId) => void reorderTopics(nameKey, draggedId, targetId)}
+      />
 
       <FactsSection
         personKey={nameKey}
@@ -285,41 +215,6 @@ export function PersonPage() {
         onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
         onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(nameKey, draggedId, targetId)}
       />
-
-      <section>
-        <button
-          type="button"
-          onClick={() => setShowArchived((s) => !s)}
-          className="mb-1 flex w-full items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wide text-stone-400"
-        >
-          <span>Archived ({visibleTopics.archived.length})</span>
-          <span>{showArchived ? "▾" : "▸"}</span>
-        </button>
-        {showArchived && visibleTopics.archived.length > 0 && (
-          <div className="rounded-lg bg-stone-100/50 px-1 py-1">
-            {visibleTopics.archived.map((topic) => (
-              <TopicRow
-                key={topic.id}
-                topic={topic}
-                followUps={bundle.followUps}
-                archived
-                topicHighlighted={timeCluster.topicIds.has(topic.id)}
-                followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
-                onClusterSelect={handleClusterSelect}
-                onPin={() => void toggleTopicPin(topic.id)}
-                onArchive={() => {}}
-                onUnarchive={() => void unarchiveTopic(topic.id)}
-                onDelete={() => void scheduleDeleteTopic(topic.id)}
-                onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
-                onAddFollowUp={() => {}}
-                onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
-                onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
-                pendingFollowUpDeletes={pendingFollowUpDeletes}
-              />
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

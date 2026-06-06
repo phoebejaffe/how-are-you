@@ -2,6 +2,7 @@ import { UNSORTED_DROP_ID } from "../../lib/folders";
 
 export type PersonDragData = { type: "person"; nameKey: string };
 export type FactDragData = { type: "fact"; factId: string };
+export type TopicSortData = { type: "topic-sort"; topicId: string };
 export type FolderSortData = { type: "folder-sort"; folderId: string };
 export type FolderDropData = { type: "folder-drop"; folderId: string | null };
 
@@ -11,6 +12,18 @@ export function personDragId(nameKey: string): string {
 
 export function factDragId(factId: string): string {
   return `fact:${factId}`;
+}
+
+export function topicSortId(topicId: string): string {
+  return `topic-sort:${topicId}`;
+}
+
+export function topicIdFromSortId(sortId: string): string {
+  return sortId.slice("topic-sort:".length);
+}
+
+export function isTopicSortId(id: string | number): boolean {
+  return String(id).startsWith("topic-sort:");
 }
 
 export function folderSortId(folderId: string): string {

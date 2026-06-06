@@ -30,7 +30,7 @@ export function groupUnpinnedFacts(
   };
 }
 
-function factsLayoutStorageKey(personKey: string): string {
+export function factsLayoutStorageKey(personKey: string): string {
   return `${FACTS_LAYOUT_STORAGE_KEY}-${personKey}`;
 }
 

@@ -6,7 +6,7 @@ export interface RowMenuItem {
   destructive?: boolean;
 }
 
-export function RowMenu({ items }: { items: RowMenuItem[] }) {
+export function RowMenu({ items, compact = false }: { items: RowMenuItem[]; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -33,7 +33,9 @@ export function RowMenu({ items }: { items: RowMenuItem[] }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex min-h-10 min-w-10 items-center justify-center rounded text-sm leading-none text-stone-400 active:bg-stone-200 active:text-stone-600"
+        className={`flex items-center justify-center rounded text-sm leading-none text-stone-400 active:bg-stone-200 active:text-stone-600 ${
+          compact ? "h-7 w-7" : "min-h-10 min-w-10"
+        }`}
         aria-label="Actions"
         aria-expanded={open}
         aria-haspopup="menu"

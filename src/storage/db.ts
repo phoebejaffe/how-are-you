@@ -2,7 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, Topic } from "../types";
 
 export const DB_NAME = "how-are-you-v1";
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 interface HowAreYouDB extends DBSchema {
   people: {

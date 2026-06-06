@@ -1,27 +1,20 @@
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Channel, Fact, FactFolder } from "../../types";
+import type { ReactNode } from "react";
 import { UNSORTED_DROP_ID } from "../../lib/folders";
 import { folderDropId, folderSortId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { UnsortedFolderHeader } from "../folders/FolderHeader";
 import { mergeRefs } from "../dnd/mergeRefs";
-import { FactRow } from "./FactRow";
 
-export function UnsortedFactsSection({
-  facts,
-  folders,
-  onPin,
-  onDeleteFact,
-  onEdit,
-  onMoveToFolder,
+export function CollectionUnsortedSection({
+  label,
+  itemCount,
+  children,
 }: {
-  facts: Fact[];
-  folders: FactFolder[];
-  onPin: (factId: string) => void;
-  onDeleteFact: (factId: string) => void;
-  onEdit: (factId: string, text: string, channel: Channel) => void;
-  onMoveToFolder: (factId: string, folderId: string | null) => void;
+  label: string;
+  itemCount: number;
+  children: ReactNode;
 }) {
   const sortable = useSortable({
     id: folderSortId(UNSORTED_DROP_ID),
@@ -44,26 +37,15 @@ export function UnsortedFactsSection({
       style={style}
       className={`mb-2 rounded-lg bg-stone-100/80 px-1 py-1 transition-shadow ${
         sortable.isDragging ? "opacity-40" : ""
-      } ${droppable.isOver ? "ring-2 ring-sage/60" : ""} ${facts.length === 0 ? "min-h-12" : ""}`}
+      } ${droppable.isOver ? "ring-2 ring-sage/60" : ""} ${itemCount === 0 ? "min-h-12" : ""}`}
     >
       <UnsortedFolderHeader
-        label="Unsorted"
-        count={facts.length}
+        label={label}
+        count={itemCount}
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
       />
-      {facts.map((fact) => (
-        <FactRow
-          key={fact.id}
-          fact={fact}
-          folders={folders}
-          draggable
-          onPin={() => onPin(fact.id)}
-          onDelete={() => onDeleteFact(fact.id)}
-          onEdit={(text, ch) => onEdit(fact.id, text, ch)}
-          onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
-        />
-      ))}
+      <div className="pl-3">{children}</div>
     </div>
   );
 }

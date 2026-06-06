@@ -1,11 +1,21 @@
 import type { ReactNode } from "react";
 
-export function SectionAddLink({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+export function SectionAddLink({
+  children,
+  onClick,
+  compact = false,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  compact?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-10 items-center py-2 text-xs text-stone-400 active:text-stone-600 active:underline"
+      className={`items-center text-xs leading-none text-stone-400 active:text-stone-600 active:underline ${
+        compact ? "block w-fit py-0.5" : "inline-flex min-h-10 py-2"
+      }`}
     >
       <span className="mr-0.5 text-stone-500" aria-hidden="true">
         +

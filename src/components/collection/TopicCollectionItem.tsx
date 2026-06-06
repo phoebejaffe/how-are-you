@@ -1,19 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type HTMLAttributes } from "react";
 import type { Channel, FollowUp, Topic } from "../../types";
 import {
   isTopicFollowUpsCollapsed,
   setTopicFollowUpsCollapsed,
 } from "../../lib/topicFollowUpCollapse";
 import { ChannelPicker } from "../ui/ChannelPicker";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { EntryRow } from "../ui/EntryRow";
-import { InlineEditor } from "../ui/InlineEditor";
-import { copyMenuItem } from "../../lib/clipboard";
-import type { RowMenuItem } from "../ui/RowMenu";
 import { SectionAddLink } from "../ui/SectionAddLink";
 import { TextActionLink } from "../ui/TextActionLink";
+import { CollectionItemRow } from "./CollectionItemRow";
+import { FOLLOW_UP_ITEM_FEATURES, TOPIC_ITEM_FEATURES } from "./itemFeatures";
 
-export function TopicRow({
+export function TopicCollectionItem({
   topic,
   followUps,
   archived = false,
@@ -29,6 +26,7 @@ export function TopicRow({
   topicHighlighted = false,
   followUpHighlighted,
   onClusterSelect,
+  sortableHandleProps,
 }: {
   topic: Topic;
   followUps: FollowUp[];
@@ -45,14 +43,11 @@ export function TopicRow({
   topicHighlighted?: boolean;
   followUpHighlighted?: (followUpId: string) => boolean;
   onClusterSelect?: (timestampIso: string) => void;
+  sortableHandleProps?: HTMLAttributes<HTMLElement>;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
   const [followUpText, setFollowUpText] = useState("");
   const [followUpChannel, setFollowUpChannel] = useState<Channel>("call");
   const [addingFollowUp, setAddingFollowUp] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmDeleteFollowUpId, setConfirmDeleteFollowUpId] = useState<string | null>(null);
   const [showAllFollowUps, setShowAllFollowUps] = useState(false);
   const [followUpsExpanded, setFollowUpsExpanded] = useState(
     () => !archived && !isTopicFollowUpsCollapsed(topic.id),
@@ -80,115 +75,91 @@ export function TopicRow({
     }
   }, [archived, topic.id]);
 
-  const topicMenuItems = useMemo((): RowMenuItem[] => {
-    return [
-      copyMenuItem(topic.text),
-      { label: "Edit", onClick: () => setEditing(true) },
-      ...(archived
-        ? [{ label: "Unarchive", onClick: () => onUnarchive?.() }]
-        : [
-            { label: topic.pinned ? "Unpin" : "Pin", onClick: onPin },
-            { label: "Archive", onClick: onArchive },
-          ]),
-      { label: "Delete", onClick: () => setConfirmDelete(true), destructive: true },
-    ];
-  }, [archived, onArchive, onPin, onUnarchive, topic.pinned, topic.text]);
-
   function toggleFollowUps() {
-    if (!canShowFollowUpSection) return;
+    if (!canShowFollowUpSection || !TOPIC_ITEM_FEATURES.collapsible) return;
     const next = !followUpsExpanded;
     setFollowUpsExpanded(next);
     setTopicFollowUpsCollapsed(topic.id, !next);
   }
 
-  function followUpMenuItems(followUp: FollowUp): RowMenuItem[] {
-    return [
-      copyMenuItem(followUp.text),
-      { label: "Edit", onClick: () => setEditingFollowUpId(followUp.id) },
-      { label: "Delete", onClick: () => setConfirmDeleteFollowUpId(followUp.id), destructive: true },
-    ];
-  }
-
-  if (editing) {
-    return (
-      <div className="py-2 pl-2">
-        <InlineEditor
-          text={topic.text}
-          channel={topic.channel}
-          onSave={(text, channel) => {
-            onEdit(text, channel);
-            setEditing(false);
-          }}
-          onCancel={() => setEditing(false)}
-        />
-      </div>
-    );
-  }
-
   return (
-    <>
-      <EntryRow
-        topic
+    <div
+      className={`mb-2.5 last:mb-0 rounded-lg ${topic.pinned && !archived ? "bg-amber-50/80 px-1 ring-1 ring-amber-200/50" : ""}`}
+    >
+      <CollectionItemRow
         text={topic.text}
         timestampIso={topic.createdAtIso}
         channel={topic.channel}
         pinned={topic.pinned}
-        menuItems={topicMenuItems}
         archived={archived}
         highlighted={topicHighlighted}
+        topicSpacing
+        features={{
+          ...TOPIC_ITEM_FEATURES,
+          pin: !archived,
+          archive: !archived,
+          unarchive: archived,
+        }}
+        menuActions={{
+          onEdit: () => {},
+          onPin,
+          onArchive,
+          onUnarchive,
+          onDelete,
+        }}
+        editChannel={topic.channel}
+        onSaveEdit={onEdit}
+        deleteTitle="Delete topic?"
+        deleteMessage="This will permanently remove the topic and its follow-ups."
         disclosureCollapsed={canShowFollowUpSection && !followUpsExpanded}
+        disclosureCount={topicFollowUps.length}
         onRowClick={canShowFollowUpSection ? toggleFollowUps : undefined}
         onClusterSelect={onClusterSelect}
+        sortableHandleProps={archived ? undefined : sortableHandleProps}
       />
 
       {followUpsExpanded && canShowFollowUpSection && (
         <div className="ml-4 space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
-            <TextActionLink tone="accent" onClick={() => setShowAllFollowUps(true)}>
-              Show {hiddenFollowUpCount} more
-            </TextActionLink>
+            <div className="py-0.5 leading-none">
+              <TextActionLink tone="accent" onClick={() => setShowAllFollowUps(true)}>
+                Show {hiddenFollowUpCount} more
+              </TextActionLink>
+            </div>
           )}
           {needsFollowUpCollapse && showAllFollowUps && (
-            <TextActionLink onClick={() => setShowAllFollowUps(false)}>
-              Show less
-            </TextActionLink>
+            <div className="py-0.5 leading-none">
+              <TextActionLink onClick={() => setShowAllFollowUps(false)}>Show less</TextActionLink>
+            </div>
           )}
-          {displayedFollowUps.map((f) =>
-            editingFollowUpId === f.id ? (
-              <div key={f.id} className={followUpItemClass}>
-                <div className="py-0.5">
-                  <InlineEditor
-                    compact
-                    text={f.text}
-                    channel={f.channel}
-                    onSave={(text, channel) => {
-                      onEditFollowUp(f.id, text, channel);
-                      setEditingFollowUpId(null);
-                    }}
-                    onCancel={() => setEditingFollowUpId(null)}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div key={f.id} className={followUpItemClass}>
-                <EntryRow
-                  text={f.text}
-                  timestampIso={f.recordedAtIso}
-                  channel={f.channel}
-                  menuItems={followUpMenuItems(f)}
-                  archived={archived}
-                  highlighted={followUpHighlighted?.(f.id) ?? false}
-                  onClusterSelect={onClusterSelect}
-                  compact
-                />
-              </div>
-            ),
-          )}
+          {displayedFollowUps.map((followUp) => (
+            <div key={followUp.id} className={followUpItemClass}>
+              <CollectionItemRow
+                text={followUp.text}
+                timestampIso={followUp.recordedAtIso}
+                channel={followUp.channel}
+                archived={archived}
+                highlighted={followUpHighlighted?.(followUp.id) ?? false}
+                compact
+                features={FOLLOW_UP_ITEM_FEATURES}
+                menuActions={{
+                  onEdit: () => {},
+                  onDelete: () => onDeleteFollowUp(followUp.id),
+                }}
+                editChannel={followUp.channel}
+                editCompact
+                onSaveEdit={(text, channel) => onEditFollowUp(followUp.id, text, channel)}
+                deleteTitle="Delete follow-up?"
+                deleteMessage="This follow-up will be permanently removed."
+                onClusterSelect={onClusterSelect}
+              />
+            </div>
+          ))}
           {!archived && !addingFollowUp && (
-            <div className={followUpItemClass}>
-              <div className="pl-2">
-                <SectionAddLink onClick={() => setAddingFollowUp(true)}>Record a followup</SectionAddLink>
-              </div>
+            <div className={`${followUpItemClass} py-0.5 leading-none`}>
+              <SectionAddLink compact onClick={() => setAddingFollowUp(true)}>
+                followup
+              </SectionAddLink>
             </div>
           )}
           {!archived && addingFollowUp && (
@@ -230,27 +201,6 @@ export function TopicRow({
         </div>
       )}
 
-      <ConfirmDialog
-        open={confirmDelete}
-        title="Delete topic?"
-        message="This will permanently remove the topic and its follow-ups."
-        onConfirm={() => {
-          setConfirmDelete(false);
-          onDelete();
-        }}
-        onCancel={() => setConfirmDelete(false)}
-      />
-
-      <ConfirmDialog
-        open={confirmDeleteFollowUpId !== null}
-        title="Delete follow-up?"
-        message="This follow-up will be permanently removed."
-        onConfirm={() => {
-          if (confirmDeleteFollowUpId) onDeleteFollowUp(confirmDeleteFollowUpId);
-          setConfirmDeleteFollowUpId(null);
-        }}
-        onCancel={() => setConfirmDeleteFollowUpId(null)}
-      />
-    </>
+    </div>
   );
 }
