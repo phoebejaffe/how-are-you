@@ -21,6 +21,7 @@ export function PersonPage() {
   const addTopic = useAppStore((s) => s.addTopic);
   const addFact = useAppStore((s) => s.addFact);
   const scheduleArchiveTopic = useAppStore((s) => s.scheduleArchiveTopic);
+  const unarchiveTopic = useAppStore((s) => s.unarchiveTopic);
   const scheduleDeleteTopic = useAppStore((s) => s.scheduleDeleteTopic);
   const toggleTopicPin = useAppStore((s) => s.toggleTopicPin);
   const updateTopic = useAppStore((s) => s.updateTopic);
@@ -284,6 +285,7 @@ export function PersonPage() {
                 onClusterSelect={handleClusterSelect}
                 onPin={() => void toggleTopicPin(topic.id)}
                 onArchive={() => {}}
+                onUnarchive={() => void unarchiveTopic(topic.id)}
                 onDelete={() => void scheduleDeleteTopic(topic.id)}
                 onEdit={(text, ch) => void updateTopic(topic.id, text, ch)}
                 onAddFollowUp={() => {}}

@@ -1,5 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Channel, FollowUp, Topic } from "../../types";
+import {
+  isTopicFollowUpsCollapsed,
+  setTopicFollowUpsCollapsed,
+} from "../../lib/topicFollowUpCollapse";
 import { ChannelPicker } from "../ui/ChannelPicker";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
@@ -12,6 +16,7 @@ export function TopicRow({
   archived = false,
   onPin,
   onArchive,
+  onUnarchive,
   onDelete,
   onEdit,
   onAddFollowUp,
@@ -27,6 +32,7 @@ export function TopicRow({
   archived?: boolean;
   onPin: () => void;
   onArchive: () => void;
+  onUnarchive?: () => void;
   onDelete: () => void;
   onEdit: (text: string, channel: Channel) => void;
   onAddFollowUp: (text: string, channel: Channel) => void;
@@ -45,6 +51,9 @@ export function TopicRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeleteFollowUpId, setConfirmDeleteFollowUpId] = useState<string | null>(null);
   const [showAllFollowUps, setShowAllFollowUps] = useState(false);
+  const [followUpsExpanded, setFollowUpsExpanded] = useState(
+    () => !archived && !isTopicFollowUpsCollapsed(topic.id),
+  );
 
   const topicFollowUps = useMemo(
     () =>
@@ -53,7 +62,7 @@ export function TopicRow({
         .sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso)),
     [followUps, topic.id, pendingFollowUpDeletes],
   );
-  const showFollowUps = topicFollowUps.length > 0 || !archived;
+  const canShowFollowUpSection = topicFollowUps.length > 0 || !archived;
   const needsFollowUpCollapse = topicFollowUps.length > 5;
   const hiddenFollowUpCount = topicFollowUps.length - 4;
   const displayedFollowUps =
@@ -61,18 +70,32 @@ export function TopicRow({
 
   const followUpItemClass = `border-l-2 pl-2 ${archived ? "border-stone-200" : "border-sage/40"}`;
 
+  useEffect(() => {
+    if (archived) {
+      setFollowUpsExpanded(false);
+      setTopicFollowUpsCollapsed(topic.id, true);
+    }
+  }, [archived, topic.id]);
+
   const topicMenuItems = useMemo((): RowMenuItem[] => {
     return [
       { label: "Edit", onClick: () => setEditing(true) },
-      ...(!archived
-        ? [
+      ...(archived
+        ? [{ label: "Unarchive", onClick: () => onUnarchive?.() }]
+        : [
             { label: topic.pinned ? "Unpin" : "Pin", onClick: onPin },
             { label: "Archive", onClick: onArchive },
-          ]
-        : []),
+          ]),
       { label: "Delete", onClick: () => setConfirmDelete(true), destructive: true },
     ];
-  }, [archived, onArchive, onPin, topic.pinned]);
+  }, [archived, onArchive, onPin, onUnarchive, topic.pinned]);
+
+  function toggleFollowUps() {
+    if (!canShowFollowUpSection) return;
+    const next = !followUpsExpanded;
+    setFollowUpsExpanded(next);
+    setTopicFollowUpsCollapsed(topic.id, !next);
+  }
 
   function followUpMenuItems(followUpId: string): RowMenuItem[] {
     return [
@@ -107,10 +130,12 @@ export function TopicRow({
         menuItems={topicMenuItems}
         archived={archived}
         highlighted={topicHighlighted}
+        disclosureCollapsed={canShowFollowUpSection && !followUpsExpanded}
+        onRowClick={canShowFollowUpSection ? toggleFollowUps : undefined}
         onClusterSelect={onClusterSelect}
       />
 
-      {showFollowUps && (
+      {followUpsExpanded && canShowFollowUpSection && (
         <div className="ml-4 space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
             <button
@@ -134,16 +159,16 @@ export function TopicRow({
             editingFollowUpId === f.id ? (
               <div key={f.id} className={followUpItemClass}>
                 <div className="py-0.5">
-                <InlineEditor
-                  compact
-                  text={f.text}
-                  channel={f.channel}
-                  onSave={(text, channel) => {
-                    onEditFollowUp(f.id, text, channel);
-                    setEditingFollowUpId(null);
-                  }}
-                  onCancel={() => setEditingFollowUpId(null)}
-                />
+                  <InlineEditor
+                    compact
+                    text={f.text}
+                    channel={f.channel}
+                    onSave={(text, channel) => {
+                      onEditFollowUp(f.id, text, channel);
+                      setEditingFollowUpId(null);
+                    }}
+                    onCancel={() => setEditingFollowUpId(null)}
+                  />
                 </div>
               </div>
             ) : (

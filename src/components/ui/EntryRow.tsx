@@ -15,6 +15,8 @@ export function EntryRow({
   archived = false,
   highlighted = false,
   compact = false,
+  disclosureCollapsed = false,
+  onRowClick,
   onClusterSelect,
 }: {
   leading?: ReactNode;
@@ -26,6 +28,8 @@ export function EntryRow({
   archived?: boolean;
   highlighted?: boolean;
   compact?: boolean;
+  disclosureCollapsed?: boolean;
+  onRowClick?: () => void;
   onClusterSelect?: (timestampIso: string) => void;
 }) {
   const meta = (
@@ -37,6 +41,19 @@ export function EntryRow({
 
   return (
     <div
+      role={onRowClick ? "button" : undefined}
+      tabIndex={onRowClick ? 0 : undefined}
+      onClick={onRowClick}
+      onKeyDown={
+        onRowClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onRowClick();
+              }
+            }
+          : undefined
+      }
       className={`flex items-start gap-2 rounded pl-2 text-sm transition-colors ${
         compact ? "py-0.5" : "min-h-10 py-2"
       } ${
@@ -45,7 +62,7 @@ export function EntryRow({
           : archived
             ? "bg-stone-100/60 text-stone-500"
             : "hover:bg-white/70"
-      }`}
+      } ${onRowClick ? "cursor-pointer" : ""}`}
     >
       {leading}
       <div className="min-w-0 flex-1 break-words text-left">
@@ -57,6 +74,11 @@ export function EntryRow({
         {text}
       </div>
       <div className="flex shrink-0 items-center gap-2 pt-0.5">
+        {disclosureCollapsed && (
+          <span className="text-[10px] text-stone-400" aria-hidden="true">
+            ▸
+          </span>
+        )}
         {onClusterSelect ? (
           <button
             type="button"
@@ -75,7 +97,9 @@ export function EntryRow({
             {meta}
           </span>
         )}
-        <RowMenu items={menuItems} />
+        <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <RowMenu items={menuItems} />
+        </div>
       </div>
     </div>
   );

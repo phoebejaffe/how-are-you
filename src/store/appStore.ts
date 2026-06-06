@@ -11,6 +11,7 @@ import {
   type UndoSnapshot,
 } from "../domain/undoQueue";
 import { reorderFactFolders } from "../lib/factFolders";
+import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
@@ -42,6 +43,7 @@ interface AppState {
   scheduleDeletePerson: (nameKey: string) => Promise<void>;
   addTopic: (nameKey: string, text: string, channel: Channel) => Promise<void>;
   scheduleArchiveTopic: (topicId: string) => Promise<void>;
+  unarchiveTopic: (topicId: string) => Promise<void>;
   scheduleDeleteTopic: (topicId: string) => Promise<void>;
   toggleTopicPin: (topicId: string) => Promise<void>;
   updateTopic: (topicId: string, text: string, channel: Channel) => Promise<void>;
@@ -259,6 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const archived: Topic = { ...topic, status: "archived" };
     await repo.saveTopic(archived);
+    setTopicFollowUpsCollapsed(topicId, true);
     set((state) => ({
       pendingArchives: new Set(state.pendingArchives).add(topicId),
     }));
@@ -287,6 +290,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     setTimeout(() => {
       if (get().pendingArchives.has(topicId)) commit();
     }, UNDO_MS);
+  },
+
+  async unarchiveTopic(topicId) {
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
+    if (!topic || topic.status !== "archived") return;
+    await repo.saveTopic({ ...topic, status: "active" });
+    await get().loadBundle(personKey);
   },
 
   async scheduleDeleteTopic(topicId) {
