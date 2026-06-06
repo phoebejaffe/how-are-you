@@ -1,4 +1,4 @@
-export function FolderPlusIcon({ className = "h-5 w-5" }: { className?: string }) {
+export function FolderPlusIcon({ className = "h-3 w-3" }: { className?: string }) {
   return (
     <svg
       className={className}

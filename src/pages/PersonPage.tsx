@@ -186,7 +186,7 @@ export function PersonPage() {
       )}
 
       <section className="mb-3">
-        <div className="mb-1 flex items-baseline gap-2 px-2">
+        <div className="mb-1 flex items-baseline gap-2 pr-2">
           <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
           {!addingTopic && (
             <button

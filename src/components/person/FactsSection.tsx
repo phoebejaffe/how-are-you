@@ -151,7 +151,7 @@ export function FactsSection({
 
   return (
     <section className="mb-3">
-      <div className="mb-1 flex items-baseline gap-2 px-2">
+      <div className="mb-1 flex items-baseline gap-2 pr-2">
         <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Facts</h2>
         {!addingFact && (
           <button
@@ -162,106 +162,105 @@ export function FactsSection({
             add a fact
           </button>
         )}
+        {!addingFolder && (
+          <button
+            type="button"
+            onClick={() => setAddingFolder(true)}
+            className="ml-auto shrink-0 rounded p-0.5 text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+            aria-label="New folder"
+          >
+            <FolderPlusIcon />
+          </button>
+        )}
       </div>
 
       {addingFact && (
         <>
-          <div className="my-1 flex items-center gap-2 px-1">
-            <form
-              className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = factText.trim();
-                if (!trimmed) return;
-                onAddFact(trimmed, targetFolderId || undefined);
+          <form
+            className="my-1 flex flex-wrap items-center gap-1 px-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = factText.trim();
+              if (!trimmed) return;
+              onAddFact(trimmed, targetFolderId || undefined);
+              setFactText("");
+              setAddingFact(false);
+            }}
+          >
+            <input
+              value={factText}
+              onChange={(e) => setFactText(e.target.value)}
+              placeholder="add a fact"
+              className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+              autoFocus
+            />
+            {hasFolders && (
+              <select
+                value={targetFolderId}
+                onChange={(e) => setTargetFolderId(e.target.value)}
+                className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
+                aria-label="Folder"
+              >
+                <option value="">Unsorted</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 setFactText("");
                 setAddingFact(false);
               }}
+              aria-label="Cancel"
+              className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
             >
-              <input
-                value={factText}
-                onChange={(e) => setFactText(e.target.value)}
-                placeholder="add a fact"
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-                autoFocus
-              />
-              {hasFolders && (
-                <select
-                  value={targetFolderId}
-                  onChange={(e) => setTargetFolderId(e.target.value)}
-                  className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
-                  aria-label="Folder"
-                >
-                  <option value="">Unsorted</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFactText("");
-                  setAddingFact(false);
-                }}
-                aria-label="Cancel"
-                className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
-              >
-                X
-              </button>
-            </form>
-            {!addingFolder && (
-              <button
-                type="button"
-                onClick={() => setAddingFolder(true)}
-                className="shrink-0 rounded p-1 text-stone-500 hover:bg-stone-100 hover:text-stone-700"
-                aria-label="New folder"
-              >
-                <FolderPlusIcon />
-              </button>
-            )}
-          </div>
-          {addingFolder && (
-            <form
-              className="my-1 flex flex-wrap items-center gap-1 px-1"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const trimmed = folderName.trim();
-                if (!trimmed) return;
-                onAddFolder(trimmed);
-                setFolderName("");
-                setAddingFolder(false);
-              }}
-            >
-              <input
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-                placeholder="Folder name…"
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-                autoFocus
-              />
-              <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-                Create
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFolderName("");
-                  setAddingFolder(false);
-                }}
-                aria-label="Cancel"
-                className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
-              >
-                X
-              </button>
-            </form>
-          )}
+              X
+            </button>
+          </form>
         </>
+      )}
+
+      {addingFolder && (
+        <form
+          className="my-1 flex flex-wrap items-center gap-1 px-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = folderName.trim();
+            if (!trimmed) return;
+            onAddFolder(trimmed);
+            setFolderName("");
+            setAddingFolder(false);
+          }}
+        >
+          <input
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            placeholder="Folder name…"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+            autoFocus
+          />
+          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFolderName("");
+              setAddingFolder(false);
+            }}
+            aria-label="Cancel"
+            className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+          >
+            X
+          </button>
+        </form>
       )}
 
       <div className="rounded-lg bg-white/40 px-1 py-1">
