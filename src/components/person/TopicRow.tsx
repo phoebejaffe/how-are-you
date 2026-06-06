@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { formatRelativeTime } from "../../lib/dates";
 import type { Channel, FollowUp, Topic } from "../../types";
 import { ChannelBadge } from "../ui/ChannelBadge";
 import { ChannelPicker } from "../ui/ChannelPicker";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { InlineEditor } from "../ui/InlineEditor";
+import { RowMenu } from "../ui/RowMenu";
 
 export function TopicRow({
   topic,
@@ -36,6 +37,20 @@ export function TopicRow({
 
   const topicFollowUps = followUps.filter((f) => f.topicId === topic.id);
 
+  const menuItems = useMemo(() => {
+    const items = [
+      { label: "Edit", onClick: () => setEditing(true) },
+      ...(!archived
+        ? [
+            { label: topic.pinned ? "Unpin" : "Pin", onClick: onPin },
+            { label: "Archive", onClick: onArchive },
+          ]
+        : []),
+      { label: "Delete", onClick: () => setConfirmDelete(true), destructive: true },
+    ];
+    return items;
+  }, [archived, onArchive, onPin, topic.pinned]);
+
   if (editing) {
     return (
       <div className="px-2 py-1">
@@ -55,7 +70,7 @@ export function TopicRow({
   return (
     <>
       <div
-        className={`group flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm ${
+        className={`flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm ${
           archived ? "bg-stone-100/60 text-stone-500" : "hover:bg-white/70"
         }`}
       >
@@ -70,34 +85,7 @@ export function TopicRow({
         </button>
         <span className="shrink-0 text-[10px] text-stone-400">{formatRelativeTime(topic.createdAtIso)}</span>
         <ChannelBadge channel={topic.channel} />
-        <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded p-0.5 text-xs hover:bg-stone-200"
-            title="Edit"
-          >
-            ✎
-          </button>
-          {!archived && (
-            <>
-              <button type="button" onClick={onPin} className="rounded p-0.5 text-xs hover:bg-stone-200" title="Pin">
-                📌
-              </button>
-              <button type="button" onClick={onArchive} className="rounded p-0.5 text-xs hover:bg-stone-200" title="Archive">
-                📦
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="rounded p-0.5 text-xs hover:bg-stone-200"
-            title="Delete"
-          >
-            🗑
-          </button>
-        </div>
+        <RowMenu items={menuItems} />
       </div>
 
       {expanded && (
@@ -117,20 +105,13 @@ export function TopicRow({
                 />
               </div>
             ) : (
-              <div key={f.id} className="group/followup flex min-h-7 items-center gap-2 text-xs text-stone-600">
+              <div key={f.id} className="flex min-h-7 items-center gap-2 text-xs text-stone-600">
                 <span className="min-w-0 flex-1 truncate" title={f.text}>
                   ↳ {f.text}
                 </span>
                 <span className="shrink-0 text-[10px] text-stone-400">{formatRelativeTime(f.recordedAtIso)}</span>
                 <ChannelBadge channel={f.channel} />
-                <button
-                  type="button"
-                  onClick={() => setEditingFollowUpId(f.id)}
-                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-stone-200 group-hover/followup:opacity-100"
-                  title="Edit"
-                >
-                  ✎
-                </button>
+                <RowMenu items={[{ label: "Edit", onClick: () => setEditingFollowUpId(f.id) }]} />
               </div>
             ),
           )}
