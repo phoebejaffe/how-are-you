@@ -188,13 +188,15 @@ export function TopicRow({
             ),
           )}
           {!archived && !addingFollowUp && (
-            <button
-              type="button"
-              onClick={() => setAddingFollowUp(true)}
-              className="text-xs text-stone-400 hover:text-stone-600 hover:underline"
-            >
-              Record a followup
-            </button>
+            <div className={followUpItemClass}>
+              <button
+                type="button"
+                onClick={() => setAddingFollowUp(true)}
+                className="pl-2 text-xs text-stone-400 hover:text-stone-600 hover:underline"
+              >
+                Record a followup
+              </button>
+            </div>
           )}
           {!archived && addingFollowUp && (
             <form
