@@ -10,6 +10,7 @@ export interface Person {
   createdAtIso: string;
   updatedAtIso: string;
   folderId?: string;
+  sortOrder?: number;
   lastActivityAtIso?: string;
   lastActivityType?: ActivityType;
 }
@@ -28,8 +29,17 @@ export interface Topic {
   status: TopicStatus;
   pinned: boolean;
   sortOrder: number;
+  folderId?: string;
   createdAtIso: string;
   channel: Channel;
+}
+
+export interface TopicFolder {
+  id: string;
+  personNameKey: string;
+  name: string;
+  collapsed: boolean;
+  sortOrder: number;
 }
 
 export interface FollowUp {
@@ -45,6 +55,7 @@ export interface Fact {
   personNameKey: string;
   text: string;
   pinned: boolean;
+  sortOrder?: number;
   recordedAtIso: string;
   channel: Channel;
   folderId?: string;
@@ -64,6 +75,7 @@ export interface PersonBundle {
   followUps: FollowUp[];
   facts: Fact[];
   factFolders: FactFolder[];
+  topicFolders: TopicFolder[];
 }
 
 export interface ExportPayload {

@@ -1,20 +1,19 @@
-import {
-  DndContext,
-  closestCenter,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useMemo, useState } from "react";
-import type { Channel, FollowUp, Topic } from "../../types";
-import { topicIdFromSortId, topicSortId, isTopicSortId } from "../dnd/dndIds";
-import { useAppDndSensors } from "../dnd/dndSensors";
+import { useState } from "react";
+import type { Channel, FollowUp, Topic, TopicFolder } from "../../types";
+import { sortArchivedTopics } from "../../lib/topicOrder";
+import { topicsLayoutStorageKey } from "../../lib/topicFolders";
+import { isTopicSortId, topicSortId } from "../dnd/dndIds";
 import { ChannelPicker } from "../ui/ChannelPicker";
+import { RowMenu } from "../ui/RowMenu";
 import { SectionAddLink } from "../ui/SectionAddLink";
+import { CollectionSection } from "./CollectionSection";
 import { SortableTopicItem } from "./SortableTopicItem";
 import { TopicCollectionItem } from "./TopicCollectionItem";
 
 export function TopicsSection({
-  topics,
+  personKey,
+  folders,
+  unpinnedTopics,
   followUps,
   pendingFollowUpDeletes,
   archivedTopics,
@@ -30,16 +29,24 @@ export function TopicsSection({
   onAddFollowUp,
   onEditFollowUp,
   onDeleteFollowUp,
+  onMoveToFolder,
   onReorderTopics,
+  onAddFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onToggleFolderCollapsed,
+  onReorderLayout,
 }: {
-  topics: Topic[];
+  personKey: string;
+  folders: TopicFolder[];
+  unpinnedTopics: Topic[];
   followUps: FollowUp[];
   pendingFollowUpDeletes: Set<string>;
   archivedTopics: Topic[];
   topicHighlighted?: (topicId: string) => boolean;
   followUpHighlighted?: (followUpId: string) => boolean;
   onClusterSelect?: (timestampIso: string) => void;
-  onAddTopic: (text: string, channel: Channel) => void;
+  onAddTopic: (text: string, channel: Channel, folderId?: string) => void;
   onPin: (topicId: string) => void;
   onArchive: (topicId: string) => void;
   onUnarchive: (topicId: string) => void;
@@ -48,38 +55,35 @@ export function TopicsSection({
   onAddFollowUp: (topicId: string, text: string, channel: Channel) => void;
   onEditFollowUp: (followUpId: string, text: string, channel: Channel) => void;
   onDeleteFollowUp: (followUpId: string) => void;
+  onMoveToFolder: (topicId: string, folderId: string | null) => void;
   onReorderTopics: (draggedId: string, targetId: string) => void;
+  onAddFolder: (name: string) => void;
+  onRenameFolder: (folderId: string, name: string) => void;
+  onDeleteFolder: (folderId: string) => void;
+  onToggleFolderCollapsed: (folderId: string) => void;
+  onReorderLayout: (draggedId: string, targetId: string) => void;
 }) {
-  const sensors = useAppDndSensors();
   const [topicText, setTopicText] = useState("");
   const [topicChannel, setTopicChannel] = useState<Channel>("call");
-  const [addingTopic, setAddingTopic] = useState(false);
-  const [showArchived, setShowArchived] = useState(true);
+  const [targetFolderId, setTargetFolderId] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const hasFolders = folders.length > 0;
+  const sortedArchived = sortArchivedTopics(archivedTopics);
+  const hasArchived = sortedArchived.length > 0;
 
-  const sortableIds = useMemo(() => topics.map((t) => topicSortId(t.id)), [topics]);
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    if (!isTopicSortId(activeId) || !isTopicSortId(overId) || activeId === overId) return;
-    onReorderTopics(topicIdFromSortId(activeId), topicIdFromSortId(overId));
-  }
-
-  function renderArchivedTopic(topic: Topic) {
+  function renderTopicItem(topic: Topic, archived: boolean) {
     return (
       <TopicCollectionItem
-        key={topic.id}
         topic={topic}
+        folders={folders}
         followUps={followUps}
-        archived
+        archived={archived}
         topicHighlighted={topicHighlighted?.(topic.id)}
         followUpHighlighted={followUpHighlighted}
         onClusterSelect={onClusterSelect}
         onPin={() => onPin(topic.id)}
         onArchive={() => onArchive(topic.id)}
-        onUnarchive={() => onUnarchive(topic.id)}
+        onUnarchive={archived ? () => onUnarchive(topic.id) : undefined}
         onDelete={() => onDelete(topic.id)}
         onEdit={(text, ch) => onEdit(topic.id, text, ch)}
         onAddFollowUp={(text, ch) => onAddFollowUp(topic.id, text, ch)}
@@ -91,92 +95,120 @@ export function TopicsSection({
   }
 
   return (
-    <>
-      <section className="mb-3">
-        <div className="mb-1 flex items-baseline gap-2 pr-2">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
-          {!addingTopic && <SectionAddLink onClick={() => setAddingTopic(true)}>add a topic</SectionAddLink>}
-        </div>
-
-        {addingTopic && (
-          <AddTopicForm
-            topicText={topicText}
-            topicChannel={topicChannel}
-            onTextChange={setTopicText}
-            onChannelChange={setTopicChannel}
-            onSubmit={() => {
-              onAddTopic(topicText, topicChannel);
-              setTopicText("");
-              setAddingTopic(false);
-            }}
-            onCancel={() => {
-              setTopicText("");
-              setAddingTopic(false);
-            }}
-          />
-        )}
-
-        <div className="rounded-lg bg-white/40 px-1 py-1">
-          {topics.length === 0 && (
-            <p className="px-2 py-2 text-center text-xs text-stone-400">No active topics.</p>
-          )}
-
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-              {topics.map((topic) => (
-                <SortableTopicItem
-                  key={topic.id}
-                  topic={topic}
-                  followUps={followUps}
-                  pendingFollowUpDeletes={pendingFollowUpDeletes}
-                  topicHighlighted={topicHighlighted?.(topic.id)}
-                  followUpHighlighted={followUpHighlighted}
-                  onClusterSelect={onClusterSelect}
-                  onPin={() => onPin(topic.id)}
-                  onArchive={() => onArchive(topic.id)}
-                  onDelete={() => onDelete(topic.id)}
-                  onEdit={(text, ch) => onEdit(topic.id, text, ch)}
-                  onAddFollowUp={(text, ch) => onAddFollowUp(topic.id, text, ch)}
-                  onEditFollowUp={onEditFollowUp}
-                  onDeleteFollowUp={onDeleteFollowUp}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-      </section>
-
-      <section>
-        <button
-          type="button"
-          onClick={() => setShowArchived((s) => !s)}
-          className="mb-1 flex min-h-10 w-full items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-wide text-stone-400 active:text-stone-600"
-        >
-          <span>Archived ({archivedTopics.length})</span>
-          <span>{showArchived ? "▾" : "▸"}</span>
-        </button>
-        {showArchived && archivedTopics.length > 0 && (
-          <div className="rounded-lg bg-stone-100/50 px-1 py-1">
-            {archivedTopics.map((topic) => renderArchivedTopic(topic))}
+    <CollectionSection
+      title="Topics"
+      addLinkLabel="add a topic"
+      emptyMessage="No active topics."
+      layoutStorageKey={topicsLayoutStorageKey(personKey)}
+      items={unpinnedTopics}
+      folders={folders}
+      archivedItems={sortedArchived}
+      showArchivedItems={showArchived}
+      headerMenu={
+        hasArchived && !showArchived ? (
+          <RowMenu compact items={[{ label: "Show archived", onClick: () => setShowArchived(true) }]} />
+        ) : undefined
+      }
+      headerBanner={
+        showArchived ? (
+          <div className="mb-1 px-1">
+            <SectionAddLink onClick={() => setShowArchived(false)} hidePrefix>
+              hide archived items
+            </SectionAddLink>
           </div>
-        )}
-      </section>
-    </>
+        ) : undefined
+      }
+      features={{
+        folders: true,
+        folderCreate: true,
+        dragItems: true,
+        dragFolders: true,
+        addFolderPicker: true,
+        addChannelPicker: true,
+      }}
+      isItemDragId={isTopicSortId}
+      itemIdFromDragId={(dragId) => dragId.slice("topic-sort:".length)}
+      getItemDragId={(topic) => topicSortId(topic.id)}
+      onAddFolder={onAddFolder}
+      onRenameFolder={onRenameFolder}
+      onDeleteFolder={onDeleteFolder}
+      onToggleFolderCollapsed={onToggleFolderCollapsed}
+      onMoveItemToFolder={(topicId, folderId) => onMoveToFolder(topicId, folderId)}
+      onReorderItems={onReorderTopics}
+      onReorderFolders={onReorderLayout}
+      addForm={({ onDone }) => (
+        <AddTopicForm
+          topicText={topicText}
+          topicChannel={topicChannel}
+          targetFolderId={targetFolderId}
+          folders={folders}
+          hasFolders={hasFolders}
+          onTextChange={setTopicText}
+          onChannelChange={setTopicChannel}
+          onFolderChange={setTargetFolderId}
+          onSubmit={() => {
+            onAddTopic(topicText, topicChannel, targetFolderId || undefined);
+            setTopicText("");
+            setTargetFolderId("");
+            onDone();
+          }}
+          onCancel={() => {
+            setTopicText("");
+            setTargetFolderId("");
+            onDone();
+          }}
+        />
+      )}
+      renderItem={(topic, { sortable, archived }) =>
+        sortable && !archived ? (
+          <SortableTopicItem
+            topic={topic}
+            folders={folders}
+            followUps={followUps}
+            pendingFollowUpDeletes={pendingFollowUpDeletes}
+            topicHighlighted={topicHighlighted?.(topic.id)}
+            followUpHighlighted={followUpHighlighted}
+            onClusterSelect={onClusterSelect}
+            onPin={() => onPin(topic.id)}
+            onArchive={() => onArchive(topic.id)}
+            onDelete={() => onDelete(topic.id)}
+            onEdit={(text, ch) => onEdit(topic.id, text, ch)}
+            onAddFollowUp={(text, ch) => onAddFollowUp(topic.id, text, ch)}
+            onEditFollowUp={onEditFollowUp}
+            onDeleteFollowUp={onDeleteFollowUp}
+            onMoveToFolder={(folderId) => onMoveToFolder(topic.id, folderId)}
+          />
+        ) : (
+          renderTopicItem(topic, Boolean(archived))
+        )
+      }
+      renderDragOverlay={(topic) => (
+        <div className="rounded-lg bg-white/95 px-3 py-2 text-sm shadow-md ring-1 ring-sage/40">{topic.text}</div>
+      )}
+    />
   );
 }
 
 function AddTopicForm({
   topicText,
   topicChannel,
+  targetFolderId,
+  folders,
+  hasFolders,
   onTextChange,
   onChannelChange,
+  onFolderChange,
   onSubmit,
   onCancel,
 }: {
   topicText: string;
   topicChannel: Channel;
+  targetFolderId: string;
+  folders: TopicFolder[];
+  hasFolders: boolean;
   onTextChange: (value: string) => void;
   onChannelChange: (value: Channel) => void;
+  onFolderChange: (value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
@@ -198,6 +230,21 @@ function AddTopicForm({
         autoFocus
       />
       <ChannelPicker value={topicChannel} onChange={onChannelChange} />
+      {hasFolders && (
+        <select
+          value={targetFolderId}
+          onChange={(e) => onFolderChange(e.target.value)}
+          className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
+          aria-label="Folder"
+        >
+          <option value="">Unsorted</option>
+          {folders.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {folder.name}
+            </option>
+          ))}
+        </select>
+      )}
       <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
         Add
       </button>

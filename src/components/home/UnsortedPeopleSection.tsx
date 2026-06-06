@@ -1,12 +1,13 @@
 import { useDroppable } from "@dnd-kit/core";
-import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { UNSORTED_DROP_ID } from "../../lib/folders";
+import { sortPeopleInFolder } from "../../lib/personOrder";
 import type { Person } from "../../types";
-import { folderDropId, folderSortId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
+import { folderDropId, folderSortId, personDragId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { UnsortedFolderHeader } from "../folders/FolderHeader";
 import { mergeRefs } from "../dnd/mergeRefs";
-import { PersonListRow, sortPeople } from "./PersonListRow";
+import { SortablePersonRow } from "./SortablePersonRow";
 
 export function UnsortedPeopleSection({
   people,
@@ -15,7 +16,8 @@ export function UnsortedPeopleSection({
   people: Person[];
   onDeletePerson: (nameKey: string) => void;
 }) {
-  const sortedPeople = sortPeople(people);
+  const sortedPeople = sortPeopleInFolder(people, null);
+  const sortableIds = sortedPeople.map((person) => personDragId(person.nameKey));
 
   const sortable = useSortable({
     id: folderSortId(UNSORTED_DROP_ID),
@@ -46,17 +48,18 @@ export function UnsortedPeopleSection({
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
       />
-      <ul className="divide-y divide-stone-200/80 pl-4">
-        {sortedPeople.map((person) => (
-          <li key={person.nameKey}>
-            <PersonListRow
-              person={person}
-              draggable
-              onDelete={() => onDeletePerson(person.nameKey)}
-            />
-          </li>
-        ))}
-      </ul>
+      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+        <ul className="divide-y divide-stone-200/80 pl-4">
+          {sortedPeople.map((person) => (
+            <li key={person.nameKey}>
+              <SortablePersonRow
+                person={person}
+                onDelete={() => onDeletePerson(person.nameKey)}
+              />
+            </li>
+          ))}
+        </ul>
+      </SortableContext>
     </div>
   );
 }

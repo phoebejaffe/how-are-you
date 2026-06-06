@@ -1,3 +1,4 @@
+import type { HTMLAttributes } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
 import { factDragId } from "../dnd/dndIds";
 import { CollectionItemRow } from "./CollectionItemRow";
@@ -12,6 +13,7 @@ export function FactCollectionItem({
   onDelete,
   onEdit,
   onMoveToFolder,
+  sortableHandleProps,
 }: {
   fact: Fact;
   folders?: FactFolder[];
@@ -20,6 +22,7 @@ export function FactCollectionItem({
   onDelete: () => void;
   onEdit: (text: string, channel: Channel) => void;
   onMoveToFolder?: (folderId: string | null) => void;
+  sortableHandleProps?: HTMLAttributes<HTMLElement>;
 }) {
   const folderRefs: CollectionFolderRef[] = folders.map((f) => ({ id: f.id, name: f.name }));
 
@@ -31,7 +34,7 @@ export function FactCollectionItem({
       pinned={fact.pinned}
       features={{
         ...FACT_ITEM_FEATURES,
-        draggable,
+        draggable: draggable && !sortableHandleProps,
         moveToFolder: Boolean(onMoveToFolder && folders.length > 0),
       }}
       menuActions={{
@@ -46,7 +49,8 @@ export function FactCollectionItem({
       onSaveEdit={onEdit}
       deleteTitle="Delete fact?"
       deleteMessage="This fact will be permanently removed."
-      dragId={draggable ? factDragId(fact.id) : undefined}
+      dragId={draggable && !sortableHandleProps ? factDragId(fact.id) : undefined}
+      sortableHandleProps={sortableHandleProps}
     />
   );
 }

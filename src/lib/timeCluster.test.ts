@@ -42,6 +42,7 @@ const bundle: PersonBundle = {
   ],
   facts: [],
   factFolders: [],
+  topicFolders: [],
 };
 
 describe("timeCluster", () => {

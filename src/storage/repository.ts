@@ -1,6 +1,8 @@
 import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
+import { withFactSortOrders } from "../lib/factOrder";
+import { withPersonSortOrders } from "../lib/personOrder";
 import { withTopicSortOrders } from "../lib/topicOrder";
-import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, PersonBundle, Topic } from "../types";
+import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, PersonBundle, Topic, TopicFolder } from "../types";
 import { getDb } from "./db";
 
 async function enrichPersonActivity(person: Person): Promise<Person> {
@@ -22,10 +24,21 @@ async function enrichPersonActivity(person: Person): Promise<Person> {
   return enriched;
 }
 
+function withFactSortOrdersLegacy(facts: Fact[]): Fact[] {
+  return withFactSortOrders(facts);
+}
+
 export async function listPeople(): Promise<Person[]> {
   const db = await getDb();
   const people = await db.getAll("people");
-  const enriched = await Promise.all(people.map((person) => enrichPersonActivity(person)));
+  const withSort = withPersonSortOrders(people);
+  for (const person of withSort) {
+    const prev = people.find((entry) => entry.nameKey === person.nameKey);
+    if (prev && prev.sortOrder !== person.sortOrder) {
+      await db.put("people", person);
+    }
+  }
+  const enriched = await Promise.all(withSort.map((person) => enrichPersonActivity(person)));
   return enriched.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
@@ -75,10 +88,11 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
   const person = await db.get("people", nameKey);
   if (!person) return null;
 
-  const [topics, facts, factFolders] = await Promise.all([
+  const [topics, facts, factFolders, topicFolders] = await Promise.all([
     db.getAllFromIndex("topics", "by-person", nameKey),
     db.getAllFromIndex("facts", "by-person", nameKey),
     db.getAllFromIndex("factFolders", "by-person", nameKey),
+    db.getAllFromIndex("topicFolders", "by-person", nameKey),
   ]);
 
   const followUps: FollowUp[] = [];
@@ -97,7 +111,22 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
     }
   }
 
-  return { person, topics: normalizedTopics, followUps, facts, factFolders };
+  const normalizedFacts = withFactSortOrdersLegacy(facts);
+  for (const fact of normalizedFacts) {
+    const prev = facts.find((entry) => entry.id === fact.id);
+    if (prev && prev.sortOrder !== fact.sortOrder) {
+      await saveFact(fact);
+    }
+  }
+
+  return {
+    person,
+    topics: normalizedTopics,
+    followUps,
+    facts: normalizedFacts,
+    factFolders,
+    topicFolders,
+  };
 }
 
 export async function listAllBundles(): Promise<PersonBundle[]> {
@@ -136,9 +165,19 @@ export async function deleteFactFolderHard(id: string): Promise<void> {
   await db.delete("factFolders", id);
 }
 
+export async function saveTopicFolder(folder: TopicFolder): Promise<void> {
+  const db = await getDb();
+  await db.put("topicFolders", folder);
+}
+
+export async function deleteTopicFolderHard(id: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("topicFolders", id);
+}
+
 export async function deletePersonHard(nameKey: string): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders"], "readwrite");
+  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders", "topicFolders"], "readwrite");
   const topics = await tx.objectStore("topics").index("by-person").getAll(nameKey);
   for (const topic of topics) {
     const followUps = await tx.objectStore("followUps").index("by-topic").getAll(topic.id);
@@ -154,6 +193,10 @@ export async function deletePersonHard(nameKey: string): Promise<void> {
   const factFolders = await tx.objectStore("factFolders").index("by-person").getAll(nameKey);
   for (const folder of factFolders) {
     await tx.objectStore("factFolders").delete(folder.id);
+  }
+  const topicFolders = await tx.objectStore("topicFolders").index("by-person").getAll(nameKey);
+  for (const folder of topicFolders) {
+    await tx.objectStore("topicFolders").delete(folder.id);
   }
   await tx.objectStore("people").delete(nameKey);
   await tx.done;
@@ -192,10 +235,11 @@ export async function renamePerson(oldKey: string, newKey: string, displayName: 
     updatedAtIso: new Date().toISOString(),
   };
 
-  const tx = db.transaction(["people", "topics", "facts", "factFolders"], "readwrite");
+  const tx = db.transaction(["people", "topics", "facts", "factFolders", "topicFolders"], "readwrite");
   const topics = await tx.objectStore("topics").index("by-person").getAll(oldKey);
   const facts = await tx.objectStore("facts").index("by-person").getAll(oldKey);
   const factFolders = await tx.objectStore("factFolders").index("by-person").getAll(oldKey);
+  const topicFolders = await tx.objectStore("topicFolders").index("by-person").getAll(oldKey);
 
   await tx.objectStore("people").delete(oldKey);
   await tx.objectStore("people").put(updatedPerson);
@@ -209,13 +253,16 @@ export async function renamePerson(oldKey: string, newKey: string, displayName: 
   for (const folder of factFolders) {
     await tx.objectStore("factFolders").put({ ...folder, personNameKey: newKey });
   }
+  for (const folder of topicFolders) {
+    await tx.objectStore("topicFolders").put({ ...folder, personNameKey: newKey });
+  }
 
   await tx.done;
 }
 
 export async function savePersonBundle(bundle: PersonBundle): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders"], "readwrite");
+  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders", "topicFolders"], "readwrite");
   await tx.objectStore("people").put(bundle.person);
   for (const topic of bundle.topics) {
     await tx.objectStore("topics").put(topic);
@@ -228,6 +275,9 @@ export async function savePersonBundle(bundle: PersonBundle): Promise<void> {
   }
   for (const folder of bundle.factFolders ?? []) {
     await tx.objectStore("factFolders").put(folder);
+  }
+  for (const folder of bundle.topicFolders ?? []) {
+    await tx.objectStore("topicFolders").put(folder);
   }
   await tx.done;
 }

@@ -34,6 +34,7 @@ export function FriendsSection({
   folders,
   onDeletePerson,
   onMovePersonToFolder,
+  onReorderPeople,
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -44,6 +45,7 @@ export function FriendsSection({
   folders: PeopleFolder[];
   onDeletePerson: (nameKey: string) => void;
   onMovePersonToFolder: (nameKey: string, folderId: string | null) => void;
+  onReorderPeople: (draggedKey: string, targetKey: string) => void;
   onAddFolder: (name: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -101,6 +103,21 @@ export function FriendsSection({
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (isPersonDragId(activeId) && isPersonDragId(overId) && activeId !== overId) {
+      const draggedKey = activeId.slice("person:".length);
+      const targetKey = overId.slice("person:".length);
+      const draggedPerson = people.find((p) => p.nameKey === draggedKey);
+      const targetPerson = people.find((p) => p.nameKey === targetKey);
+      if (
+        draggedPerson &&
+        targetPerson &&
+        (draggedPerson.folderId ?? null) === (targetPerson.folderId ?? null)
+      ) {
+        onReorderPeople(draggedKey, targetKey);
+      }
+      return;
+    }
 
     if (isPersonDragId(activeId)) {
       const nameKey = activeId.slice("person:".length);

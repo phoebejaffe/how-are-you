@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { PeopleFolder, Person } from "../../types";
-import { folderDropId, folderSortId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
+import { sortPeopleInFolder } from "../../lib/personOrder";
+import { folderDropId, folderSortId, personDragId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { FolderHeader } from "../folders/FolderHeader";
 import { mergeRefs } from "../dnd/mergeRefs";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { PersonListRow, sortPeople } from "./PersonListRow";
+import { SortablePersonRow } from "./SortablePersonRow";
 
 export function PeopleFolderSection({
   folder,
@@ -25,7 +26,8 @@ export function PeopleFolderSection({
   onDeletePerson: (nameKey: string) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const sortedPeople = sortPeople(people);
+  const sortedPeople = sortPeopleInFolder(people, folder.id);
+  const sortableIds = sortedPeople.map((person) => personDragId(person.nameKey));
 
   const sortable = useSortable({
     id: folderSortId(folder.id),
@@ -62,17 +64,18 @@ export function PeopleFolderSection({
       />
 
       {!folder.collapsed && (
-        <ul className="divide-y divide-stone-200/80 pl-4">
-          {sortedPeople.map((person) => (
-            <li key={person.nameKey}>
-              <PersonListRow
-                person={person}
-                draggable
-                onDelete={() => onDeletePerson(person.nameKey)}
-              />
-            </li>
-          ))}
-        </ul>
+        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+          <ul className="divide-y divide-stone-200/80 pl-4">
+            {sortedPeople.map((person) => (
+              <li key={person.nameKey}>
+                <SortablePersonRow
+                  person={person}
+                  onDelete={() => onDeletePerson(person.nameKey)}
+                />
+              </li>
+            ))}
+          </ul>
+        </SortableContext>
       )}
 
       <ConfirmDialog

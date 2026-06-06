@@ -59,12 +59,24 @@ function remapIds<T extends { id: string }>(items: T[], usedIds: Set<string>): T
   });
 }
 
+function remapFolderedItems<T extends { id: string; folderId?: string }>(
+  items: T[],
+  usedIds: Set<string>,
+  folderIdMap: Map<string, string>,
+): T[] {
+  return remapIds(items, usedIds).map((item) => {
+    if (!item.folderId) return item;
+    return { ...item, folderId: folderIdMap.get(item.folderId) ?? item.folderId };
+  });
+}
+
 export function mergePersonBundles(existing: PersonBundle, imported: PersonBundle): PersonBundle {
   const usedIds = new Set<string>([
     ...existing.topics.map((t) => t.id),
     ...existing.followUps.map((f) => f.id),
     ...existing.facts.map((f) => f.id),
     ...(existing.factFolders ?? []).map((f) => f.id),
+    ...(existing.topicFolders ?? []).map((f) => f.id),
   ]);
 
   const importedTopics = remapIds(imported.topics, usedIds);
@@ -85,19 +97,24 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
     return { ...followUp, topicId: remappedTopicId };
   });
 
-  const importedFacts = remapIds(imported.facts, usedIds);
-  const importedFolders = remapIds(imported.factFolders ?? [], usedIds);
-  const folderIdMap = new Map<string, string>();
+  const importedFactFolders = remapIds(imported.factFolders ?? [], usedIds);
+  const factFolderIdMap = new Map<string, string>();
   (imported.factFolders ?? []).forEach((folder, i) => {
-    if (folder.id !== importedFolders[i].id) {
-      folderIdMap.set(folder.id, importedFolders[i].id);
+    if (folder.id !== importedFactFolders[i].id) {
+      factFolderIdMap.set(folder.id, importedFactFolders[i].id);
     }
   });
 
-  const remappedImportedFacts = importedFacts.map((fact) => {
-    if (!fact.folderId) return fact;
-    return { ...fact, folderId: folderIdMap.get(fact.folderId) ?? fact.folderId };
+  const importedTopicFolders = remapIds(imported.topicFolders ?? [], usedIds);
+  const topicFolderIdMap = new Map<string, string>();
+  (imported.topicFolders ?? []).forEach((folder, i) => {
+    if (folder.id !== importedTopicFolders[i].id) {
+      topicFolderIdMap.set(folder.id, importedTopicFolders[i].id);
+    }
   });
+
+  const importedFacts = remapFolderedItems(imported.facts, usedIds, factFolderIdMap);
+  const remappedImportedTopics = remapFolderedItems(importedTopics, usedIds, topicFolderIdMap);
 
   return {
     person: {
@@ -105,10 +122,11 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
       displayName: existing.person.displayName,
       updatedAtIso: new Date().toISOString(),
     },
-    topics: [...existing.topics, ...importedTopics],
+    topics: [...existing.topics, ...remappedImportedTopics],
     followUps: [...existing.followUps, ...importedFollowUps],
-    facts: [...existing.facts, ...remappedImportedFacts],
-    factFolders: [...(existing.factFolders ?? []), ...importedFolders],
+    facts: [...existing.facts, ...importedFacts],
+    factFolders: [...(existing.factFolders ?? []), ...importedFactFolders],
+    topicFolders: [...(existing.topicFolders ?? []), ...importedTopicFolders],
   };
 }
 
@@ -125,13 +143,21 @@ export function applyImport(
     const resolution = resolutions.get(key);
 
     if (!existing) {
-      resultMap.set(key, imported);
+      resultMap.set(key, {
+        ...imported,
+        factFolders: imported.factFolders ?? [],
+        topicFolders: imported.topicFolders ?? [],
+      });
       continue;
     }
 
     if (resolution === "ignore") continue;
     if (resolution === "override") {
-      resultMap.set(key, imported);
+      resultMap.set(key, {
+        ...imported,
+        factFolders: imported.factFolders ?? [],
+        topicFolders: imported.topicFolders ?? [],
+      });
       continue;
     }
     if (resolution === "merge") {

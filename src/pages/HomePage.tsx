@@ -15,6 +15,7 @@ export function HomePage() {
   const deletePeopleFolder = useAppStore((s) => s.deletePeopleFolder);
   const togglePeopleFolderCollapsed = useAppStore((s) => s.togglePeopleFolderCollapsed);
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
+  const reorderPeople = useAppStore((s) => s.reorderPeople);
   const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
@@ -81,6 +82,7 @@ export function HomePage() {
         folders={peopleFolders}
         onDeletePerson={setDeleteTarget}
         onMovePersonToFolder={(nameKey, folderId) => void movePersonToFolder(nameKey, folderId)}
+        onReorderPeople={(draggedKey, targetKey) => void reorderPeople(draggedKey, targetKey)}
         onAddFolder={(name) => void addPeopleFolder(name)}
         onRenameFolder={(folderId, name) => void renamePeopleFolder(folderId, name)}
         onDeleteFolder={(folderId) => void deletePeopleFolder(folderId)}

@@ -11,8 +11,17 @@ export function sortFolders<T extends { sortOrder: number; name: string }>(folde
   return [...folders].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 }
 
+function sortGroupedItems<T extends { sortOrder?: number; id: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const ao = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const bo = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    if (ao !== bo) return ao - bo;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export function groupByFolder<
-  T extends { folderId?: string },
+  T extends { folderId?: string; sortOrder?: number; id: string },
   F extends { id: string; sortOrder: number; name: string },
 >(items: T[], folders: F[]): { folders: { folder: F; items: T[] }[]; unsorted: T[] } {
   const folderIds = new Set(folders.map((f) => f.id));
@@ -30,9 +39,9 @@ export function groupByFolder<
   return {
     folders: sortFolders(folders).map((folder) => ({
       folder,
-      items: byFolder.get(folder.id) ?? [],
+      items: sortGroupedItems(byFolder.get(folder.id) ?? []),
     })),
-    unsorted,
+    unsorted: sortGroupedItems(unsorted),
   };
 }
 

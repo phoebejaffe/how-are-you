@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState, type HTMLAttributes } from "react";
-import type { Channel, FollowUp, Topic } from "../../types";
+import type { Channel, FollowUp, Topic, TopicFolder } from "../../types";
 import {
   isTopicFollowUpsCollapsed,
   setTopicFollowUpsCollapsed,
 } from "../../lib/topicFollowUpCollapse";
 import { ChannelPicker } from "../ui/ChannelPicker";
 import { SectionAddLink } from "../ui/SectionAddLink";
-import { TextActionLink } from "../ui/TextActionLink";
 import { CollectionItemRow } from "./CollectionItemRow";
 import { FOLLOW_UP_ITEM_FEATURES, TOPIC_ITEM_FEATURES } from "./itemFeatures";
+import type { CollectionFolderRef } from "./types";
 
 export function TopicCollectionItem({
   topic,
+  folders = [],
   followUps,
   archived = false,
   onPin,
@@ -22,13 +23,16 @@ export function TopicCollectionItem({
   onAddFollowUp,
   onEditFollowUp,
   onDeleteFollowUp,
+  onMoveToFolder,
   pendingFollowUpDeletes,
   topicHighlighted = false,
   followUpHighlighted,
   onClusterSelect,
   sortableHandleProps,
+  pinnedStrip = false,
 }: {
   topic: Topic;
+  folders?: TopicFolder[];
   followUps: FollowUp[];
   archived?: boolean;
   onPin: () => void;
@@ -39,11 +43,13 @@ export function TopicCollectionItem({
   onAddFollowUp: (text: string, channel: Channel) => void;
   onEditFollowUp: (followUpId: string, text: string, channel: Channel) => void;
   onDeleteFollowUp: (followUpId: string) => void;
+  onMoveToFolder?: (folderId: string | null) => void;
   pendingFollowUpDeletes: Set<string>;
   topicHighlighted?: boolean;
   followUpHighlighted?: (followUpId: string) => boolean;
   onClusterSelect?: (timestampIso: string) => void;
   sortableHandleProps?: HTMLAttributes<HTMLElement>;
+  pinnedStrip?: boolean;
 }) {
   const [followUpText, setFollowUpText] = useState("");
   const [followUpChannel, setFollowUpChannel] = useState<Channel>("call");
@@ -67,6 +73,9 @@ export function TopicCollectionItem({
     needsFollowUpCollapse && !showAllFollowUps ? topicFollowUps.slice(-4) : topicFollowUps;
 
   const followUpItemClass = `border-l-2 pl-2 ${archived ? "border-stone-200" : "border-sage/40"}`;
+  const folderRefs: CollectionFolderRef[] = folders.map((f) => ({ id: f.id, name: f.name }));
+  const showPinnedStyle = topic.pinned && !archived && !pinnedStrip;
+  const followUpActionLinkClass = `border-l-2 pl-4 ${archived ? "border-stone-200" : "border-sage/40"}`;
 
   useEffect(() => {
     if (archived) {
@@ -84,7 +93,7 @@ export function TopicCollectionItem({
 
   return (
     <div
-      className={`mb-2.5 last:mb-0 rounded-lg ${topic.pinned && !archived ? "bg-amber-50/80 px-1 ring-1 ring-amber-200/50" : ""}`}
+      className={`mb-3.5 last:mb-0 rounded-lg ${showPinnedStyle ? "bg-amber-50/80 px-1 ring-1 ring-amber-200/50" : ""}`}
     >
       <CollectionItemRow
         text={topic.text}
@@ -99,12 +108,16 @@ export function TopicCollectionItem({
           pin: !archived,
           archive: !archived,
           unarchive: archived,
+          moveToFolder: Boolean(!archived && onMoveToFolder && folders.length > 0),
         }}
+        folders={folderRefs}
+        currentFolderId={topic.folderId ?? null}
         menuActions={{
           onEdit: () => {},
           onPin,
           onArchive,
           onUnarchive,
+          onMoveToFolder,
           onDelete,
         }}
         editChannel={topic.channel}
@@ -121,15 +134,17 @@ export function TopicCollectionItem({
       {followUpsExpanded && canShowFollowUpSection && (
         <div className="ml-4 space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
-            <div className="py-0.5 leading-none">
-              <TextActionLink tone="accent" onClick={() => setShowAllFollowUps(true)}>
-                Show {hiddenFollowUpCount} more
-              </TextActionLink>
+            <div className={`${followUpActionLinkClass} py-0.5 leading-none`}>
+              <SectionAddLink compact prefix="..." onClick={() => setShowAllFollowUps(true)}>
+                show {hiddenFollowUpCount} more
+              </SectionAddLink>
             </div>
           )}
           {needsFollowUpCollapse && showAllFollowUps && (
-            <div className="py-0.5 leading-none">
-              <TextActionLink onClick={() => setShowAllFollowUps(false)}>Show less</TextActionLink>
+            <div className={`${followUpActionLinkClass} py-0.5 leading-none`}>
+              <SectionAddLink compact prefix="..." onClick={() => setShowAllFollowUps(false)}>
+                show less
+              </SectionAddLink>
             </div>
           )}
           {displayedFollowUps.map((followUp) => (
@@ -156,7 +171,7 @@ export function TopicCollectionItem({
             </div>
           ))}
           {!archived && !addingFollowUp && (
-            <div className={`${followUpItemClass} py-0.5 leading-none`}>
+            <div className={`${followUpActionLinkClass} py-0.5 leading-none`}>
               <SectionAddLink compact onClick={() => setAddingFollowUp(true)}>
                 followup
               </SectionAddLink>

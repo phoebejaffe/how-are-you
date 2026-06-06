@@ -1,10 +1,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Channel, FollowUp, Topic, TopicFolder } from "../../types";
-import { topicSortId, type TopicSortData } from "../dnd/dndIds";
+import type { Channel, Topic, TopicFolder } from "../../types";
+import { topicDragId } from "../dnd/dndIds";
 import { TopicCollectionItem } from "./TopicCollectionItem";
+import type { FollowUp } from "../../types";
 
-export function SortableTopicItem({
+export function SortableTopicCollectionItem({
   topic,
   folders = [],
   followUps,
@@ -20,7 +21,6 @@ export function SortableTopicItem({
   onEditFollowUp,
   onDeleteFollowUp,
   onMoveToFolder,
-  pinnedStrip = false,
 }: {
   topic: Topic;
   folders?: TopicFolder[];
@@ -37,11 +37,9 @@ export function SortableTopicItem({
   onEditFollowUp: (followUpId: string, text: string, channel: Channel) => void;
   onDeleteFollowUp: (followUpId: string) => void;
   onMoveToFolder?: (folderId: string | null) => void;
-  pinnedStrip?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: topicSortId(topic.id),
-    data: { type: "topic-sort", topicId: topic.id } satisfies TopicSortData,
+    id: topicDragId(topic.id),
   });
 
   const style = {
@@ -55,6 +53,7 @@ export function SortableTopicItem({
         topic={topic}
         folders={folders}
         followUps={followUps}
+        pendingFollowUpDeletes={pendingFollowUpDeletes}
         topicHighlighted={topicHighlighted}
         followUpHighlighted={followUpHighlighted}
         onClusterSelect={onClusterSelect}
@@ -66,9 +65,7 @@ export function SortableTopicItem({
         onEditFollowUp={onEditFollowUp}
         onDeleteFollowUp={onDeleteFollowUp}
         onMoveToFolder={onMoveToFolder}
-        pendingFollowUpDeletes={pendingFollowUpDeletes}
         sortableHandleProps={{ ...attributes, ...listeners }}
-        pinnedStrip={pinnedStrip}
       />
     </div>
   );

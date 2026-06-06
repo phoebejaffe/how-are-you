@@ -1,12 +1,13 @@
 import type { CollectionItemFeatures } from "./types";
 
-/** Topics: channel, pin, archive, collapsible follow-ups, time clustering. */
+/** Topics: channel, pin, archive, folders, collapsible follow-ups, time clustering. */
 export const TOPIC_ITEM_FEATURES: CollectionItemFeatures = {
   copy: true,
   edit: true,
   pin: true,
   archive: true,
   unarchive: true,
+  moveToFolder: true,
   delete: true,
   showChannel: true,
   showTimestamp: true,

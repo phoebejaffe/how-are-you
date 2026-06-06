@@ -19,14 +19,25 @@ export function sortPeopleFolders(folders: PeopleFolder[]): PeopleFolder[] {
   return sortFolders(folders);
 }
 
+function stripSortId(person: Person & { id: string }): Person {
+  const { id: _id, ...rest } = person;
+  return rest;
+}
+
 export function groupPeople(
   people: Person[],
   folders: PeopleFolder[],
 ): { folders: { folder: PeopleFolder; people: Person[] }[]; unsorted: Person[] } {
-  const grouped = groupByFolder(people, folders);
+  const grouped = groupByFolder(
+    people.map((person) => ({ ...person, id: person.nameKey })),
+    folders,
+  );
   return {
-    folders: grouped.folders.map(({ folder, items }) => ({ folder, people: items })),
-    unsorted: grouped.unsorted,
+    folders: grouped.folders.map(({ folder, items }) => ({
+      folder,
+      people: items.map(stripSortId),
+    })),
+    unsorted: grouped.unsorted.map(stripSortId),
   };
 }
 

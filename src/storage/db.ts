@@ -1,8 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, Topic } from "../types";
+import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, Topic, TopicFolder } from "../types";
 
 export const DB_NAME = "how-are-you-v1";
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 interface HowAreYouDB extends DBSchema {
   people: {
@@ -29,6 +29,11 @@ interface HowAreYouDB extends DBSchema {
     value: FactFolder;
     indexes: { "by-person": string };
   };
+  topicFolders: {
+    key: string;
+    value: TopicFolder;
+    indexes: { "by-person": string };
+  };
   peopleFolders: {
     key: string;
     value: PeopleFolder;
@@ -40,7 +45,7 @@ let dbPromise: Promise<IDBPDatabase<HowAreYouDB>> | null = null;
 export function getDb(): Promise<IDBPDatabase<HowAreYouDB>> {
   if (!dbPromise) {
     dbPromise = openDB<HowAreYouDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         if (!db.objectStoreNames.contains("people")) {
           db.createObjectStore("people", { keyPath: "nameKey" });
         }
@@ -62,6 +67,10 @@ export function getDb(): Promise<IDBPDatabase<HowAreYouDB>> {
         }
         if (!db.objectStoreNames.contains("peopleFolders")) {
           db.createObjectStore("peopleFolders", { keyPath: "id" });
+        }
+        if (oldVersion < 5 && !db.objectStoreNames.contains("topicFolders")) {
+          const store = db.createObjectStore("topicFolders", { keyPath: "id" });
+          store.createIndex("by-person", "personNameKey");
         }
       },
     });

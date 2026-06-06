@@ -4,10 +4,14 @@ export function SectionAddLink({
   children,
   onClick,
   compact = false,
+  prefix = "+",
+  hidePrefix = false,
 }: {
   children: ReactNode;
   onClick: () => void;
   compact?: boolean;
+  prefix?: string;
+  hidePrefix?: boolean;
 }) {
   return (
     <button
@@ -17,9 +21,11 @@ export function SectionAddLink({
         compact ? "block w-fit py-0.5" : "inline-flex min-h-10 py-2"
       }`}
     >
-      <span className="mr-0.5 text-stone-500" aria-hidden="true">
-        +
-      </span>
+      {!hidePrefix && (
+        <span className="mr-0.5 text-stone-500" aria-hidden="true">
+          {prefix}
+        </span>
+      )}
       {children}
     </button>
   );

@@ -10,12 +10,19 @@ import {
   type UndoAction,
   type UndoSnapshot,
 } from "../domain/undoQueue";
+import { factsAfterReorder, nextSortOrderForFact } from "../lib/factOrder";
 import {
   foldersFromLayoutOrder,
   reorderLayoutItems,
   resolveFactsLayoutOrder,
   saveFactsLayoutOrder,
 } from "../lib/factFolders";
+import { nextSortOrderForPerson, peopleAfterReorder } from "../lib/personOrder";
+import {
+  foldersFromLayoutOrder as topicFoldersFromLayoutOrder,
+  resolveTopicsLayoutOrder,
+  saveTopicsLayoutOrder,
+} from "../lib/topicFolders";
 import { bumpLastActivity } from "../lib/lastActivity";
 import {
   foldersFromLayoutOrder as peopleFoldersFromLayoutOrder,
@@ -23,7 +30,7 @@ import {
   savePeopleLayoutOrder,
 } from "../lib/peopleFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
-import { nextSortOrderForTopic, topicsAfterReorder } from "../lib/topicOrder";
+import { nextSortOrderForTopic, pinnedTopicsAfterReorder, topicsAfterReorder } from "../lib/topicOrder";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
@@ -37,6 +44,7 @@ import type {
   Person,
   PersonBundle,
   Topic,
+  TopicFolder,
 } from "../types";
 import { useToastStore } from "./toastStore";
 
@@ -56,12 +64,19 @@ interface AppState {
   addPerson: (displayName: string) => Promise<void>;
   renamePerson: (oldKey: string, newDisplayName: string) => Promise<string>;
   scheduleDeletePerson: (nameKey: string) => Promise<void>;
-  addTopic: (nameKey: string, text: string, channel: Channel) => Promise<void>;
+  addTopic: (nameKey: string, text: string, channel: Channel, folderId?: string) => Promise<void>;
   scheduleArchiveTopic: (topicId: string) => Promise<void>;
   unarchiveTopic: (topicId: string) => Promise<void>;
   scheduleDeleteTopic: (topicId: string) => Promise<void>;
   toggleTopicPin: (topicId: string) => Promise<void>;
   reorderTopics: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
+  reorderPinnedTopics: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
+  moveTopicToFolder: (topicId: string, folderId: string | null) => Promise<void>;
+  addTopicFolder: (nameKey: string, name: string) => Promise<void>;
+  renameTopicFolder: (folderId: string, name: string) => Promise<void>;
+  deleteTopicFolder: (folderId: string) => Promise<void>;
+  toggleTopicFolderCollapsed: (folderId: string) => Promise<void>;
+  reorderTopicsLayout: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
   updateTopic: (topicId: string, text: string, channel: Channel) => Promise<void>;
   addFollowUp: (topicId: string, text: string, channel: Channel) => Promise<void>;
   updateFollowUp: (followUpId: string, text: string, channel: Channel) => Promise<void>;
@@ -70,6 +85,8 @@ interface AppState {
   updateFact: (factId: string, text: string, channel: Channel) => Promise<void>;
   toggleFactPin: (factId: string) => Promise<void>;
   moveFactToFolder: (factId: string, folderId: string | null) => Promise<void>;
+  reorderFacts: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
+  reorderPinnedFacts: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
   scheduleDeleteFact: (factId: string) => Promise<void>;
   addFactFolder: (nameKey: string, name: string) => Promise<void>;
   renameFactFolder: (folderId: string, name: string) => Promise<void>;
@@ -81,6 +98,7 @@ interface AppState {
   deletePeopleFolder: (folderId: string) => Promise<void>;
   togglePeopleFolderCollapsed: (folderId: string) => Promise<void>;
   movePersonToFolder: (nameKey: string, folderId: string | null) => Promise<void>;
+  reorderPeople: (draggedKey: string, targetKey: string) => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
@@ -115,6 +133,13 @@ function bundleKeyForFact(bundles: Record<string, PersonBundle>, factId: string)
 function bundleKeyForFactFolder(bundles: Record<string, PersonBundle>, folderId: string): string | null {
   for (const [key, bundle] of Object.entries(bundles)) {
     if (bundle.factFolders?.some((f) => f.id === folderId)) return key;
+  }
+  return null;
+}
+
+function bundleKeyForTopicFolder(bundles: Record<string, PersonBundle>, folderId: string): string | null {
+  for (const [key, bundle] of Object.entries(bundles)) {
+    if (bundle.topicFolders?.some((f) => f.id === folderId)) return key;
   }
   return null;
 }
@@ -187,7 +212,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   async loadBundle(nameKey) {
     const bundle = await repo.getPersonBundle(nameKey);
     if (bundle) {
-      const normalized = { ...bundle, factFolders: bundle.factFolders ?? [] };
+      const normalized = {
+        ...bundle,
+        factFolders: bundle.factFolders ?? [],
+        topicFolders: bundle.topicFolders ?? [],
+      };
       set((state) => ({ bundles: { ...state.bundles, [nameKey]: normalized } }));
       return normalized;
     }
@@ -229,6 +258,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           topics: nextBundles[oldKey].topics.map((t) => ({ ...t, personNameKey: result.newKey })),
           facts: nextBundles[oldKey].facts.map((f) => ({ ...f, personNameKey: result.newKey })),
           factFolders: (nextBundles[oldKey].factFolders ?? []).map((f) => ({ ...f, personNameKey: result.newKey })),
+          topicFolders: (nextBundles[oldKey].topicFolders ?? []).map((f) => ({ ...f, personNameKey: result.newKey })),
         };
         delete nextBundles[oldKey];
       }
@@ -283,19 +313,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     }, UNDO_MS);
   },
 
-  async addTopic(nameKey, text, channel) {
+  async addTopic(nameKey, text, channel, folderId) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const bundle = get().bundles[nameKey];
+    const topics = bundle?.topics ?? [];
     const topic: Topic = {
       id: createId(),
       personNameKey: nameKey,
       text: trimmed,
       status: "active",
       pinned: false,
-      sortOrder: nextSortOrderForTopic(bundle?.topics ?? [], false),
+      sortOrder: nextSortOrderForTopic(topics, { pinned: false, folderId: folderId ?? null }),
       createdAtIso: nowIso(),
       channel,
+      ...(folderId ? { folderId } : {}),
     };
     await repo.saveTopic(topic);
     await get().loadBundle(nameKey);
@@ -354,7 +386,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const topic = get().bundles[personKey].topics.find((t) => t.id === topicId);
     if (!topic || topic.status !== "archived") return;
     const bundle = get().bundles[personKey];
-    const sortOrder = nextSortOrderForTopic(bundle.topics, false);
+    const sortOrder = nextSortOrderForTopic(bundle.topics, {
+      pinned: false,
+      folderId: topic.folderId ?? null,
+    });
     await repo.saveTopic({ ...topic, status: "active", sortOrder });
     await get().loadBundle(personKey);
   },
@@ -414,8 +449,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const topic = bundle.topics.find((t) => t.id === topicId);
     if (!topic) return;
     const pinned = !topic.pinned;
-    const sortOrder = nextSortOrderForTopic(bundle.topics, pinned);
-    await repo.saveTopic({ ...topic, pinned, sortOrder });
+    const sortOrder = nextSortOrderForTopic(bundle.topics, {
+      pinned,
+      folderId: pinned ? null : (topic.folderId ?? null),
+    });
+    const next: Topic = { ...topic, pinned, sortOrder };
+    if (pinned) delete next.folderId;
+    await repo.saveTopic(next);
     await get().loadBundle(personKey);
   },
 
@@ -426,6 +466,106 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!toSave) return;
     for (const topic of toSave) {
       await repo.saveTopic(topic);
+    }
+    await get().loadBundle(personKey);
+  },
+
+  async reorderPinnedTopics(personKey, draggedId, targetId) {
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
+    const toSave = pinnedTopicsAfterReorder(bundle.topics, draggedId, targetId);
+    if (!toSave) return;
+    for (const topic of toSave) {
+      await repo.saveTopic(topic);
+    }
+    await get().loadBundle(personKey);
+  },
+
+  async moveTopicToFolder(topicId, folderId) {
+    const personKey = bundleKeyForTopic(get().bundles, topicId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const topic = bundle.topics.find((t) => t.id === topicId);
+    if (!topic || topic.pinned) return;
+    if (folderId && !(bundle.topicFolders ?? []).some((f) => f.id === folderId)) return;
+
+    const next: Topic = {
+      ...topic,
+      sortOrder: nextSortOrderForTopic(bundle.topics, { pinned: false, folderId }),
+    };
+    if (folderId) next.folderId = folderId;
+    else delete next.folderId;
+
+    await repo.saveTopic(next);
+    await get().loadBundle(personKey);
+  },
+
+  async addTopicFolder(nameKey, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const bundle = (await get().loadBundle(nameKey)) ?? get().bundles[nameKey];
+    const folders = bundle?.topicFolders ?? [];
+    const maxOrder = folders.reduce((max, folder) => Math.max(max, folder.sortOrder), -1);
+    const folder: TopicFolder = {
+      id: createId(),
+      personNameKey: nameKey,
+      name: trimmed,
+      collapsed: false,
+      sortOrder: maxOrder + 1,
+    };
+    await repo.saveTopicFolder(folder);
+    await get().loadBundle(nameKey);
+  },
+
+  async renameTopicFolder(folderId, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const personKey = bundleKeyForTopicFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const folder = get().bundles[personKey].topicFolders?.find((f) => f.id === folderId);
+    if (!folder) return;
+    await repo.saveTopicFolder({ ...folder, name: trimmed });
+    await get().loadBundle(personKey);
+  },
+
+  async deleteTopicFolder(folderId) {
+    const personKey = bundleKeyForTopicFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const bundle = get().bundles[personKey];
+    const topicsInFolder = bundle.topics.filter((t) => t.folderId === folderId);
+    for (const topic of topicsInFolder) {
+      const next = { ...topic };
+      delete next.folderId;
+      await repo.saveTopic(next);
+    }
+    await repo.deleteTopicFolderHard(folderId);
+    await get().loadBundle(personKey);
+  },
+
+  async toggleTopicFolderCollapsed(folderId) {
+    const personKey = bundleKeyForTopicFolder(get().bundles, folderId);
+    if (!personKey) return;
+    const folder = get().bundles[personKey].topicFolders?.find((f) => f.id === folderId);
+    if (!folder) return;
+    await repo.saveTopicFolder({ ...folder, collapsed: !folder.collapsed });
+    await get().loadBundle(personKey);
+  },
+
+  async reorderTopicsLayout(personKey, draggedId, targetId) {
+    if (draggedId === targetId) return;
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
+
+    const currentOrder = resolveTopicsLayoutOrder(personKey, bundle.topicFolders ?? []);
+    const nextOrder = reorderLayoutItems(currentOrder, draggedId, targetId);
+    saveTopicsLayoutOrder(personKey, nextOrder);
+
+    const reorderedFolders = topicFoldersFromLayoutOrder(bundle.topicFolders ?? [], nextOrder);
+    for (const folder of reorderedFolders) {
+      const prev = (bundle.topicFolders ?? []).find((f) => f.id === folder.id);
+      if (prev && prev.sortOrder !== folder.sortOrder) {
+        await repo.saveTopicFolder(folder);
+      }
     }
     await get().loadBundle(personKey);
   },
@@ -517,11 +657,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   async addFact(nameKey, text, channel, pinned = false, folderId) {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const facts = get().bundles[nameKey]?.facts ?? [];
     const fact: Fact = {
       id: createId(),
       personNameKey: nameKey,
       text: trimmed,
       pinned,
+      sortOrder: nextSortOrderForFact(facts, { pinned, folderId: folderId ?? null }),
       recordedAtIso: nowIso(),
       channel,
       ...(folderId ? { folderId } : {}),
@@ -545,9 +687,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   async toggleFactPin(factId) {
     const personKey = bundleKeyForFact(get().bundles, factId);
     if (!personKey) return;
-    const fact = get().bundles[personKey].facts.find((f) => f.id === factId);
+    const bundle = get().bundles[personKey];
+    const fact = bundle.facts.find((f) => f.id === factId);
     if (!fact) return;
-    await repo.saveFact({ ...fact, pinned: !fact.pinned });
+    const pinned = !fact.pinned;
+    const sortOrder = nextSortOrderForFact(bundle.facts, {
+      pinned,
+      folderId: pinned ? null : (fact.folderId ?? null),
+    });
+    await repo.saveFact({ ...fact, pinned, sortOrder });
     await get().loadBundle(personKey);
   },
 
@@ -559,11 +707,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!fact) return;
     if (folderId && !bundle.factFolders.some((f) => f.id === folderId)) return;
 
-    const next = { ...fact };
+    const next: Fact = {
+      ...fact,
+      sortOrder: nextSortOrderForFact(bundle.facts, { pinned: false, folderId }),
+    };
     if (folderId) next.folderId = folderId;
     else delete next.folderId;
 
     await repo.saveFact(next);
+    await get().loadBundle(personKey);
+  },
+
+  async reorderFacts(personKey, draggedId, targetId) {
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
+    const toSave = factsAfterReorder(bundle.facts, draggedId, targetId);
+    if (!toSave) return;
+    for (const fact of toSave) {
+      await repo.saveFact(fact);
+    }
+    await get().loadBundle(personKey);
+  },
+
+  async reorderPinnedFacts(personKey, draggedId, targetId) {
+    const bundle = get().bundles[personKey];
+    if (!bundle) return;
+    const pinned = bundle.facts.filter((f) => f.pinned);
+    const toSave = factsAfterReorder(pinned, draggedId, targetId);
+    if (!toSave) return;
+    for (const fact of toSave) {
+      await repo.saveFact(fact);
+    }
     await get().loadBundle(personKey);
   },
 
@@ -700,13 +874,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!person) return;
     if (folderId && !get().peopleFolders.some((f) => f.id === folderId)) return;
 
-    const next = { ...person };
+    const next: Person = {
+      ...person,
+      sortOrder: nextSortOrderForPerson(get().people, folderId),
+    };
     if (folderId) next.folderId = folderId;
     else delete next.folderId;
 
     await repo.savePerson(next);
     set({
       people: get().people.map((p) => (p.nameKey === nameKey ? next : p)),
+    });
+  },
+
+  async reorderPeople(draggedKey, targetKey) {
+    const people = get().people;
+    const toSave = peopleAfterReorder(people, draggedKey, targetKey);
+    if (!toSave) return;
+    for (const person of toSave) {
+      await repo.savePerson(person);
+    }
+    set({
+      people: get().people.map((person) => {
+        const updated = toSave.find((p) => p.nameKey === person.nameKey);
+        return updated ?? person;
+      }),
     });
   },
 

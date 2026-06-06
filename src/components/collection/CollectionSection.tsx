@@ -41,9 +41,15 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   onDeleteFolder,
   onToggleFolderCollapsed,
   onMoveItemToFolder,
+  onReorderItems,
   onReorderFolders,
   isItemDragId = isFactDragId,
   itemIdFromDragId,
+  getItemDragId,
+  archivedItems = [],
+  showArchivedItems = false,
+  headerMenu,
+  headerBanner,
 }: {
   title: string;
   addLinkLabel: string;
@@ -53,16 +59,22 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   folders?: BaseFolder[];
   features: CollectionSectionFeatures;
   addForm: (props: { onDone: () => void }) => ReactNode;
-  renderItem: (item: TItem, options: { draggable: boolean }) => ReactNode;
+  renderItem: (item: TItem, options: { draggable: boolean; sortable: boolean; archived?: boolean }) => ReactNode;
+  archivedItems?: TItem[];
+  showArchivedItems?: boolean;
+  headerMenu?: ReactNode;
+  headerBanner?: ReactNode;
   renderDragOverlay?: (activeItem: TItem) => ReactNode;
   onAddFolder?: (name: string) => void;
   onRenameFolder?: (folderId: string, name: string) => void;
   onDeleteFolder?: (folderId: string) => void;
   onToggleFolderCollapsed?: (folderId: string) => void;
   onMoveItemToFolder?: (itemId: string, folderId: string | null) => void;
+  onReorderItems?: (draggedId: string, targetId: string) => void;
   onReorderFolders?: (draggedId: string, targetId: string) => void;
   isItemDragId?: (id: string) => boolean;
   itemIdFromDragId?: (dragId: string) => string;
+  getItemDragId?: (item: TItem) => string;
 }) {
   const sensors = useAppDndSensors();
   const [addingItem, setAddingItem] = useState(false);
@@ -77,7 +89,8 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
     [items, folders, useFolders],
   );
   const hasFolders = folders.length > 0;
-  const hasAnyItems = items.length > 0 || hasFolders;
+  const hasAnyItems =
+    items.length > 0 || hasFolders || (showArchivedItems && archivedItems.length > 0);
 
   const layoutOrder = useMemo(
     () => (useFolders ? resolveLayoutOrder(layoutStorageKey, folders.map((f) => f.id)) : []),
@@ -109,7 +122,59 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   }, [unsortedVisible, layoutStorageKey, folders, useFolders]);
 
   const resolveItemId = itemIdFromDragId ?? ((dragId: string) => dragId.slice("fact:".length));
+  const resolveItemDragId =
+    getItemDragId ?? ((item: TItem) => (itemIdFromDragId ? itemIdFromDragId(item.id) : `fact:${item.id}`));
   const activeItem = activeItemId ? items.find((item) => item.id === activeItemId) : null;
+  const canSortItems = Boolean(features.dragItems && onReorderItems);
+
+  const archivedByFolder = useMemo(() => {
+    const map = new Map<string | null, TItem[]>();
+    if (!showArchivedItems) return map;
+    for (const item of archivedItems) {
+      const key = item.folderId ?? null;
+      const list = map.get(key);
+      if (list) list.push(item);
+      else map.set(key, [item]);
+    }
+    return map;
+  }, [archivedItems, showArchivedItems]);
+
+  function archivedCountForFolder(folderId: string | null) {
+    return archivedByFolder.get(folderId)?.length ?? 0;
+  }
+
+  function renderFolderItems(folderItems: TItem[], folderId: string | null) {
+    const activeNodes = folderItems.map((item) => (
+      <div key={item.id}>
+        {renderItem(item, { draggable: Boolean(features.dragItems), sortable: canSortItems })}
+      </div>
+    ));
+
+    const archivedNodes = (archivedByFolder.get(folderId) ?? []).map((item) => (
+      <div key={item.id}>
+        {renderItem(item, { draggable: false, sortable: false, archived: true })}
+      </div>
+    ));
+
+    if (!canSortItems) {
+      return (
+        <>
+          {activeNodes}
+          {archivedNodes}
+        </>
+      );
+    }
+
+    const dragIds = folderItems.map((item) => resolveItemDragId(item));
+    return (
+      <>
+        <SortableContext items={dragIds} strategy={verticalListSortingStrategy}>
+          {activeNodes}
+        </SortableContext>
+        {archivedNodes}
+      </>
+    );
+  }
 
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
@@ -125,6 +190,21 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    if (isItemDragId(activeId) && isItemDragId(overId) && activeId !== overId && onReorderItems) {
+      const draggedId = resolveItemId(activeId);
+      const targetId = resolveItemId(overId);
+      const draggedItem = items.find((i) => i.id === draggedId);
+      const targetItem = items.find((i) => i.id === targetId);
+      if (
+        draggedItem &&
+        targetItem &&
+        (draggedItem.folderId ?? null) === (targetItem.folderId ?? null)
+      ) {
+        onReorderItems(draggedId, targetId);
+      }
+      return;
+    }
 
     if (isItemDragId(activeId) && onMoveItemToFolder) {
       const itemId = resolveItemId(activeId);
@@ -165,10 +245,12 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
           if (itemId === UNSORTED_DROP_ID) {
             if (!unsortedVisible) return null;
             return (
-              <CollectionUnsortedSection key={itemId} label="Unsorted" itemCount={grouped.unsorted.length}>
-                {grouped.unsorted.map((item) => (
-                  <div key={item.id}>{renderItem(item, { draggable: Boolean(features.dragItems) })}</div>
-                ))}
+              <CollectionUnsortedSection
+                key={itemId}
+                label="Unsorted"
+                itemCount={grouped.unsorted.length + archivedCountForFolder(null)}
+              >
+                {renderFolderItems(grouped.unsorted, null)}
               </CollectionUnsortedSection>
             );
           }
@@ -180,14 +262,12 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
             <CollectionFolderSection
               key={itemId}
               folder={folder}
-              itemCount={(folderItemsMap.get(itemId) ?? []).length}
+              itemCount={(folderItemsMap.get(itemId) ?? []).length + archivedCountForFolder(itemId)}
               onToggleCollapsed={() => onToggleFolderCollapsed?.(folder.id)}
               onRename={(name) => onRenameFolder?.(folder.id, name)}
               onDelete={() => onDeleteFolder?.(folder.id)}
             >
-              {(folderItemsMap.get(itemId) ?? []).map((item) => (
-                <div key={item.id}>{renderItem(item, { draggable: Boolean(features.dragItems) })}</div>
-              ))}
+              {renderFolderItems(folderItemsMap.get(itemId) ?? [], itemId)}
             </CollectionFolderSection>
           );
         })}
@@ -198,7 +278,7 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
       </DragOverlay>
     </DndContext>
   ) : (
-    items.map((item) => <div key={item.id}>{renderItem(item, { draggable: false })}</div>)
+    items.map((item) => <div key={item.id}>{renderItem(item, { draggable: false, sortable: false })}</div>)
   );
 
   return (
@@ -206,12 +286,19 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
       <div className="mb-1 flex items-baseline gap-2 pr-2">
         <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">{title}</h2>
         {!addingItem && <SectionAddLink onClick={() => setAddingItem(true)}>{addLinkLabel}</SectionAddLink>}
-        {useFolders && features.folderCreate && onAddFolder && !addingFolder && (
-          <IconButton className="ml-auto" onClick={() => setAddingFolder(true)} aria-label="New folder">
-            <FolderPlusIcon />
-          </IconButton>
+        {(headerMenu || (useFolders && features.folderCreate && onAddFolder && !addingFolder)) && (
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            {headerMenu}
+            {useFolders && features.folderCreate && onAddFolder && !addingFolder && (
+              <IconButton onClick={() => setAddingFolder(true)} aria-label="New folder">
+                <FolderPlusIcon />
+              </IconButton>
+            )}
+          </div>
         )}
       </div>
+
+      {headerBanner}
 
       {addingItem &&
         addForm({

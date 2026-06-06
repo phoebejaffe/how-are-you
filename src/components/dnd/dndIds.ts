@@ -18,12 +18,24 @@ export function topicSortId(topicId: string): string {
   return `topic-sort:${topicId}`;
 }
 
+export function topicDragId(topicId: string): string {
+  return `topic:${topicId}`;
+}
+
 export function topicIdFromSortId(sortId: string): string {
   return sortId.slice("topic-sort:".length);
 }
 
+export function topicIdFromDragId(dragId: string): string {
+  return dragId.slice("topic:".length);
+}
+
 export function isTopicSortId(id: string | number): boolean {
   return String(id).startsWith("topic-sort:");
+}
+
+export function isTopicDragId(id: string | number): boolean {
+  return String(id).startsWith("topic:");
 }
 
 export function folderSortId(folderId: string): string {

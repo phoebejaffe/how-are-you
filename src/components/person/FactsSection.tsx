@@ -1,8 +1,10 @@
 import { useState } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
+import { factDragId } from "../dnd/dndIds";
 import { factsLayoutStorageKey } from "../../lib/factFolders";
 import { CollectionSection } from "../collection/CollectionSection";
 import { FactCollectionItem } from "../collection/FactCollectionItem";
+import { SortableFactItem } from "../collection/SortableFactItem";
 
 export function FactsSection({
   personKey,
@@ -13,6 +15,7 @@ export function FactsSection({
   onDeleteFact,
   onEdit,
   onMoveToFolder,
+  onReorderFacts,
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -27,6 +30,7 @@ export function FactsSection({
   onDeleteFact: (factId: string) => void;
   onEdit: (factId: string, text: string, channel: Channel) => void;
   onMoveToFolder: (factId: string, folderId: string | null) => void;
+  onReorderFacts: (draggedId: string, targetId: string) => void;
   onAddFolder: (name: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -52,11 +56,13 @@ export function FactsSection({
         dragFolders: true,
         addFolderPicker: true,
       }}
+      getItemDragId={(fact) => factDragId(fact.id)}
       onAddFolder={onAddFolder}
       onRenameFolder={onRenameFolder}
       onDeleteFolder={onDeleteFolder}
       onToggleFolderCollapsed={onToggleFolderCollapsed}
-      onMoveItemToFolder={onMoveToFolder}
+      onMoveItemToFolder={(factId, folderId) => onMoveToFolder(factId, folderId)}
+      onReorderItems={onReorderFacts}
       onReorderFolders={onReorderLayout}
       addForm={({ onDone }) => (
         <form
@@ -108,17 +114,28 @@ export function FactsSection({
           </button>
         </form>
       )}
-      renderItem={(fact, { draggable }) => (
-        <FactCollectionItem
-          fact={fact}
-          folders={folders}
-          draggable={draggable}
-          onPin={() => onPin(fact.id)}
-          onDelete={() => onDeleteFact(fact.id)}
-          onEdit={(text, ch) => onEdit(fact.id, text, ch)}
-          onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
-        />
-      )}
+      renderItem={(fact, { sortable }) =>
+        sortable ? (
+          <SortableFactItem
+            fact={fact}
+            folders={folders}
+            onPin={() => onPin(fact.id)}
+            onDelete={() => onDeleteFact(fact.id)}
+            onEdit={(text, ch) => onEdit(fact.id, text, ch)}
+            onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
+          />
+        ) : (
+          <FactCollectionItem
+            fact={fact}
+            folders={folders}
+            draggable
+            onPin={() => onPin(fact.id)}
+            onDelete={() => onDeleteFact(fact.id)}
+            onEdit={(text, ch) => onEdit(fact.id, text, ch)}
+            onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
+          />
+        )
+      }
       renderDragOverlay={(fact) => (
         <div className="rounded-lg bg-white/95 px-3 py-2 text-sm shadow-md ring-1 ring-sage/40">{fact.text}</div>
       )}
