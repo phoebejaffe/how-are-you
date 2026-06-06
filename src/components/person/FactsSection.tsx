@@ -216,9 +216,10 @@ export function FactsSection({
                 setFolderName("");
                 setAddingFolder(false);
               }}
+              aria-label="Cancel"
               className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
             >
-              Cancel
+              X
             </button>
           </form>
         ) : (

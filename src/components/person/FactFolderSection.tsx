@@ -144,9 +144,10 @@ export function FactFolderSection({
                 setEditingName(false);
                 setNameInput(folder.name);
               }}
+              aria-label="Cancel"
               className="rounded px-2 py-0.5 text-xs text-stone-500"
             >
-              Cancel
+              X
             </button>
           </form>
         ) : (

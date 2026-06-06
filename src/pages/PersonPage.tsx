@@ -149,9 +149,10 @@ export function PersonPage() {
                 setEditingName(false);
                 setNameInput(bundle.person.displayName);
               }}
+              aria-label="Cancel"
               className="rounded-lg px-3 text-sm text-stone-500"
             >
-              Cancel
+              X
             </button>
           </div>
         ) : (
