@@ -1,4 +1,5 @@
 import { useState, type HTMLAttributes } from "react";
+import { CheckIcon } from "../ui/CheckIcon";
 import { RowMenu, type RowMenuItem } from "../ui/RowMenu";
 
 type HandleProps = HTMLAttributes<HTMLElement>;
@@ -61,7 +62,7 @@ export function FolderHeader({
             autoFocus
           />
           <button type="submit" className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
-            ✔️
+            <CheckIcon />
           </button>
           <button
             type="button"

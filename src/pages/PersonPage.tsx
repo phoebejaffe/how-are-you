@@ -4,6 +4,7 @@ import { PinnedTopicsSection } from "../components/collection/PinnedTopicsSectio
 import { TopicsSection } from "../components/collection/TopicsSection";
 import { FactsSection } from "../components/person/FactsSection";
 import { PinnedFactsSection } from "../components/person/PinnedFactsSection";
+import { CheckIcon } from "../components/ui/CheckIcon";
 import { RowMenu } from "../components/ui/RowMenu";
 import { sortPinnedFacts } from "../lib/factOrder";
 import { computeTimeCluster } from "../lib/timeCluster";
@@ -152,7 +153,7 @@ export function PersonPage() {
               autoFocus
             />
             <button type="button" onClick={() => void saveName()} className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
-              ✔️
+              <CheckIcon />
             </button>
             <button
               type="button"

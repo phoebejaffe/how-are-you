@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Channel } from "../../types";
 import { ChannelPicker } from "./ChannelPicker";
+import { CheckIcon } from "./CheckIcon";
 
 export function InlineEditor({
   text,
@@ -38,7 +39,7 @@ export function InlineEditor({
       />
       {showChannel && <ChannelPicker value={draftChannel} onChange={setDraftChannel} />}
       <button type="submit" className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
-        ✔️
+        <CheckIcon />
       </button>
       <button
         type="button"
