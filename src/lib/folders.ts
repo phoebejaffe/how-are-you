@@ -11,19 +11,26 @@ export function sortFolders<T extends { sortOrder: number; name: string }>(folde
   return [...folders].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 }
 
-function sortGroupedItems<T extends { sortOrder?: number; id: string }>(items: T[]): T[] {
+function sortGroupedItems<T extends { sortOrder?: number }>(
+  items: T[],
+  getId: (item: T) => string,
+): T[] {
   return [...items].sort((a, b) => {
     const ao = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
     const bo = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
     if (ao !== bo) return ao - bo;
-    return a.id.localeCompare(b.id);
+    return getId(a).localeCompare(getId(b));
   });
 }
 
 export function groupByFolder<
-  T extends { folderId?: string; sortOrder?: number; id: string },
+  T extends { folderId?: string; sortOrder?: number },
   F extends { id: string; sortOrder: number; name: string },
->(items: T[], folders: F[]): { folders: { folder: F; items: T[] }[]; unsorted: T[] } {
+>(
+  items: T[],
+  folders: F[],
+  getId: (item: T) => string = (item) => (item as unknown as { id: string }).id,
+): { folders: { folder: F; items: T[] }[]; unsorted: T[] } {
   const folderIds = new Set(folders.map((f) => f.id));
   const unsorted: T[] = [];
   const byFolder = new Map<string, T[]>(folders.map((f) => [f.id, []]));
@@ -39,9 +46,9 @@ export function groupByFolder<
   return {
     folders: sortFolders(folders).map((folder) => ({
       folder,
-      items: sortGroupedItems(byFolder.get(folder.id) ?? []),
+      items: sortGroupedItems(byFolder.get(folder.id) ?? [], getId),
     })),
-    unsorted: sortGroupedItems(unsorted),
+    unsorted: sortGroupedItems(unsorted, getId),
   };
 }
 
