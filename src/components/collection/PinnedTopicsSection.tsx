@@ -64,6 +64,7 @@ export function PinnedTopicsSection({
       <h2 className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Pinned topics</h2>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-y-2">
           {topics.map((topic) => (
             <SortableTopicItem
               key={topic.id}
@@ -85,6 +86,7 @@ export function PinnedTopicsSection({
               pinnedStrip
             />
           ))}
+          </div>
         </SortableContext>
       </DndContext>
     </section>

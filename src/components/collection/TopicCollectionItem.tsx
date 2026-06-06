@@ -93,7 +93,7 @@ export function TopicCollectionItem({
 
   return (
     <div
-      className={`mb-3.5 last:mb-0 rounded-lg ${showPinnedStyle ? "bg-amber-50/80 px-1 ring-1 ring-amber-200/50" : ""}`}
+      className={`rounded-lg ${showPinnedStyle ? "bg-amber-50/80 px-1 ring-1 ring-amber-200/50" : ""}`}
     >
       <CollectionItemRow
         text={topic.text}

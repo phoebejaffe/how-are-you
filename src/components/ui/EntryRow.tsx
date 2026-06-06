@@ -58,8 +58,8 @@ export function EntryRow({
             }
           : undefined
       }
-      className={`flex items-start gap-2 rounded text-sm leading-snug transition-colors ${
-        compact ? "py-0.5" : topic ? "py-1" : "py-1"
+      className={`flex items-start gap-2 rounded leading-snug transition-colors ${
+        compact ? "py-0.5 text-xs" : "py-1 text-sm"
       } ${
         highlighted
           ? "bg-amber-100/90 ring-1 ring-amber-300/80"

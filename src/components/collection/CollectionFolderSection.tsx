@@ -60,7 +60,7 @@ export function CollectionFolderSection({
         flush
       />
 
-      {!folder.collapsed && <div className="pl-3">{children}</div>}
+      {!folder.collapsed && <div className="flex flex-col gap-y-2 pl-3">{children}</div>}
 
       <ConfirmDialog
         open={confirmDelete}

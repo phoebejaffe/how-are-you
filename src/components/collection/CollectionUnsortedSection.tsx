@@ -46,7 +46,7 @@ export function CollectionUnsortedSection({
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         flush
       />
-      <div className="pl-3">{children}</div>
+      <div className="flex flex-col gap-y-2 pl-3">{children}</div>
     </div>
   );
 }
