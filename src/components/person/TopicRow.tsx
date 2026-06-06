@@ -59,6 +59,8 @@ export function TopicRow({
   const displayedFollowUps =
     needsFollowUpCollapse && !showAllFollowUps ? topicFollowUps.slice(-4) : topicFollowUps;
 
+  const followUpItemClass = `border-l-2 pl-2 ${archived ? "border-stone-200" : "border-sage/40"}`;
+
   const topicMenuItems = useMemo((): RowMenuItem[] => {
     return [
       { label: "Edit", onClick: () => setEditing(true) },
@@ -109,7 +111,7 @@ export function TopicRow({
       />
 
       {showFollowUps && (
-        <div className={`ml-4 space-y-1 border-l-2 pl-3 ${archived ? "border-stone-200" : "border-sage/40"}`}>
+        <div className="ml-4 space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
             <button
               type="button"
@@ -130,7 +132,8 @@ export function TopicRow({
           )}
           {displayedFollowUps.map((f) =>
             editingFollowUpId === f.id ? (
-              <div key={f.id} className="py-2 pl-2">
+              <div key={f.id} className={followUpItemClass}>
+                <div className="py-0.5">
                 <InlineEditor
                   compact
                   text={f.text}
@@ -141,18 +144,21 @@ export function TopicRow({
                   }}
                   onCancel={() => setEditingFollowUpId(null)}
                 />
+                </div>
               </div>
             ) : (
-              <EntryRow
-                key={f.id}
-                text={f.text}
-                timestampIso={f.recordedAtIso}
-                channel={f.channel}
-                menuItems={followUpMenuItems(f.id)}
-                archived={archived}
-                highlighted={followUpHighlighted?.(f.id) ?? false}
-                onClusterSelect={onClusterSelect}
-              />
+              <div key={f.id} className={followUpItemClass}>
+                <EntryRow
+                  text={f.text}
+                  timestampIso={f.recordedAtIso}
+                  channel={f.channel}
+                  menuItems={followUpMenuItems(f.id)}
+                  archived={archived}
+                  highlighted={followUpHighlighted?.(f.id) ?? false}
+                  onClusterSelect={onClusterSelect}
+                  compact
+                />
+              </div>
             ),
           )}
           {!archived && !addingFollowUp && (

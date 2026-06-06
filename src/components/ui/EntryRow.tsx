@@ -14,6 +14,7 @@ export function EntryRow({
   menuItems,
   archived = false,
   highlighted = false,
+  compact = false,
   onClusterSelect,
 }: {
   leading?: ReactNode;
@@ -24,6 +25,7 @@ export function EntryRow({
   menuItems: RowMenuItem[];
   archived?: boolean;
   highlighted?: boolean;
+  compact?: boolean;
   onClusterSelect?: (timestampIso: string) => void;
 }) {
   const meta = (
@@ -35,7 +37,9 @@ export function EntryRow({
 
   return (
     <div
-      className={`flex min-h-10 items-start gap-2 rounded py-2 pl-2 text-sm transition-colors ${
+      className={`flex items-start gap-2 rounded pl-2 text-sm transition-colors ${
+        compact ? "py-0.5" : "min-h-10 py-2"
+      } ${
         highlighted
           ? "bg-amber-100/90 ring-1 ring-amber-300/80"
           : archived
