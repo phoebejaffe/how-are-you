@@ -151,8 +151,8 @@ export function PersonPage() {
               className="input min-w-0 flex-1 font-display text-xl"
               autoFocus
             />
-            <button type="button" onClick={() => void saveName()} className="btn-primary btn-compact">
-              Save
+            <button type="button" onClick={() => void saveName()} className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
+              ✔️
             </button>
             <button
               type="button"

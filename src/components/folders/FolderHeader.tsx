@@ -60,8 +60,8 @@ export function FolderHeader({
             className="input input-compact min-w-0 flex-1 text-sm"
             autoFocus
           />
-          <button type="submit" className="btn-primary btn-compact">
-            Save
+          <button type="submit" className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
+            ✔️
           </button>
           <button
             type="button"

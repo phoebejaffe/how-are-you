@@ -37,8 +37,8 @@ export function InlineEditor({
         autoFocus
       />
       {showChannel && <ChannelPicker value={draftChannel} onChange={setDraftChannel} />}
-      <button type="submit" className="btn-primary btn-compact">
-        Save
+      <button type="submit" className="btn-primary btn-compact min-w-11 px-3" aria-label="Save">
+        ✔️
       </button>
       <button
         type="button"
