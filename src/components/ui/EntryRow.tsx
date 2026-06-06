@@ -63,7 +63,7 @@ export function EntryRow({
           ? "bg-amber-100/90 ring-1 ring-amber-300/80"
           : archived
             ? "bg-stone-100/60 text-stone-500"
-            : "hover:bg-white/70"
+            : "active:bg-white/70"
       } ${onRowClick ? "cursor-pointer" : ""}`}
     >
       {leading}
@@ -88,7 +88,7 @@ export function EntryRow({
           <button
             type="button"
             data-time-cluster-trigger
-            className="flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0"
+            className="flex min-h-10 cursor-pointer items-center gap-2 rounded border-0 bg-transparent px-1 active:bg-white/50"
             title={formatExactTime(timestampIso)}
             onClick={(e) => {
               e.stopPropagation();

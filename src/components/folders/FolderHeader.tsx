@@ -77,7 +77,7 @@ export function FolderHeader({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="flex min-w-0 flex-1 cursor-pointer touch-none select-none items-center justify-between rounded px-1 py-0.5 text-left text-xs font-semibold text-stone-600 hover:text-stone-800"
+            className="flex min-h-10 min-w-0 flex-1 cursor-pointer touch-none select-none items-center justify-between rounded px-1 text-left text-xs font-semibold text-stone-600 active:text-stone-800"
             {...sortableHandleProps}
           >
             <span className="truncate">

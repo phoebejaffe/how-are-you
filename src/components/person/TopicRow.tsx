@@ -8,7 +8,10 @@ import { ChannelPicker } from "../ui/ChannelPicker";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
+import { copyMenuItem } from "../../lib/clipboard";
 import type { RowMenuItem } from "../ui/RowMenu";
+import { SectionAddLink } from "../ui/SectionAddLink";
+import { TextActionLink } from "../ui/TextActionLink";
 
 export function TopicRow({
   topic,
@@ -79,6 +82,7 @@ export function TopicRow({
 
   const topicMenuItems = useMemo((): RowMenuItem[] => {
     return [
+      copyMenuItem(topic.text),
       { label: "Edit", onClick: () => setEditing(true) },
       ...(archived
         ? [{ label: "Unarchive", onClick: () => onUnarchive?.() }]
@@ -88,7 +92,7 @@ export function TopicRow({
           ]),
       { label: "Delete", onClick: () => setConfirmDelete(true), destructive: true },
     ];
-  }, [archived, onArchive, onPin, onUnarchive, topic.pinned]);
+  }, [archived, onArchive, onPin, onUnarchive, topic.pinned, topic.text]);
 
   function toggleFollowUps() {
     if (!canShowFollowUpSection) return;
@@ -97,10 +101,11 @@ export function TopicRow({
     setTopicFollowUpsCollapsed(topic.id, !next);
   }
 
-  function followUpMenuItems(followUpId: string): RowMenuItem[] {
+  function followUpMenuItems(followUp: FollowUp): RowMenuItem[] {
     return [
-      { label: "Edit", onClick: () => setEditingFollowUpId(followUpId) },
-      { label: "Delete", onClick: () => setConfirmDeleteFollowUpId(followUpId), destructive: true },
+      copyMenuItem(followUp.text),
+      { label: "Edit", onClick: () => setEditingFollowUpId(followUp.id) },
+      { label: "Delete", onClick: () => setConfirmDeleteFollowUpId(followUp.id), destructive: true },
     ];
   }
 
@@ -139,22 +144,14 @@ export function TopicRow({
       {followUpsExpanded && canShowFollowUpSection && (
         <div className="ml-4 space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
-            <button
-              type="button"
-              onClick={() => setShowAllFollowUps(true)}
-              className="py-0.5 text-xs text-terracotta hover:underline"
-            >
+            <TextActionLink tone="accent" onClick={() => setShowAllFollowUps(true)}>
               Show {hiddenFollowUpCount} more
-            </button>
+            </TextActionLink>
           )}
           {needsFollowUpCollapse && showAllFollowUps && (
-            <button
-              type="button"
-              onClick={() => setShowAllFollowUps(false)}
-              className="py-0.5 text-xs text-stone-400 hover:underline"
-            >
+            <TextActionLink onClick={() => setShowAllFollowUps(false)}>
               Show less
-            </button>
+            </TextActionLink>
           )}
           {displayedFollowUps.map((f) =>
             editingFollowUpId === f.id ? (
@@ -178,7 +175,7 @@ export function TopicRow({
                   text={f.text}
                   timestampIso={f.recordedAtIso}
                   channel={f.channel}
-                  menuItems={followUpMenuItems(f.id)}
+                  menuItems={followUpMenuItems(f)}
                   archived={archived}
                   highlighted={followUpHighlighted?.(f.id) ?? false}
                   onClusterSelect={onClusterSelect}
@@ -189,13 +186,9 @@ export function TopicRow({
           )}
           {!archived && !addingFollowUp && (
             <div className={followUpItemClass}>
-              <button
-                type="button"
-                onClick={() => setAddingFollowUp(true)}
-                className="pl-2 text-xs text-stone-400 hover:text-stone-600 hover:underline"
-              >
-                Record a followup
-              </button>
+              <div className="pl-2">
+                <SectionAddLink onClick={() => setAddingFollowUp(true)}>Record a followup</SectionAddLink>
+              </div>
             </div>
           )}
           {!archived && addingFollowUp && (

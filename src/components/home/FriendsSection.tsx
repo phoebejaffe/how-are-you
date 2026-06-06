@@ -25,6 +25,7 @@ import {
   UNSORTED_DROP_ID,
 } from "../../lib/peopleFolders";
 import { FolderPlusIcon } from "../ui/FolderPlusIcon";
+import { IconButton } from "../ui/IconButton";
 import { PeopleFolderSection } from "./PeopleFolderSection";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
 
@@ -133,14 +134,9 @@ export function FriendsSection({
       <div className="mb-1 flex items-baseline gap-2 pr-2">
         <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Friends</h2>
         {!addingFolder && (
-          <button
-            type="button"
-            onClick={() => setAddingFolder(true)}
-            className="ml-auto shrink-0 rounded p-0.5 text-stone-500 hover:bg-stone-100 hover:text-stone-700"
-            aria-label="New folder"
-          >
+          <IconButton className="ml-auto" onClick={() => setAddingFolder(true)} aria-label="New folder">
             <FolderPlusIcon />
-          </button>
+          </IconButton>
         )}
       </div>
 

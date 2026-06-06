@@ -49,7 +49,7 @@ export function InlineEditor({
         type="button"
         onClick={onCancel}
         aria-label="Cancel"
-        className={`rounded text-stone-500 hover:bg-stone-100 ${compact ? "px-1.5 py-0.5 text-xs" : "px-2 py-1 text-xs"}`}
+        className={`flex min-h-10 min-w-10 items-center justify-center rounded text-stone-500 active:bg-stone-100 ${compact ? "text-xs" : "text-xs"}`}
       >
         X
       </button>

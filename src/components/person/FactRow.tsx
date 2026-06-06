@@ -6,6 +6,7 @@ import { factDragId, type FactDragData } from "../dnd/dndIds";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
+import { copyMenuItem } from "../../lib/clipboard";
 import type { RowMenuItem } from "../ui/RowMenu";
 
 export function FactRow({
@@ -38,6 +39,7 @@ export function FactRow({
 
   const menuItems = useMemo((): RowMenuItem[] => {
     const items: RowMenuItem[] = [
+      copyMenuItem(fact.text),
       { label: "Edit", onClick: () => setEditing(true) },
       { label: fact.pinned ? "Unpin" : "Pin", onClick: onPin },
     ];
@@ -60,7 +62,7 @@ export function FactRow({
 
     items.push({ label: "Delete", onClick: () => setConfirmDelete(true), destructive: true });
     return items;
-  }, [fact.folderId, fact.pinned, folders, onMoveToFolder, onPin]);
+  }, [fact.folderId, fact.pinned, fact.text, folders, onMoveToFolder, onPin]);
 
   if (editing) {
     return (

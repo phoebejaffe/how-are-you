@@ -4,6 +4,8 @@ import { FactRow } from "../components/person/FactRow";
 import { FactsSection } from "../components/person/FactsSection";
 import { TopicRow } from "../components/person/TopicRow";
 import { ChannelPicker } from "../components/ui/ChannelPicker";
+import { RowMenu } from "../components/ui/RowMenu";
+import { SectionAddLink } from "../components/ui/SectionAddLink";
 import { computeTimeCluster } from "../lib/timeCluster";
 import type { Channel } from "../types";
 import { useAppStore } from "../store/appStore";
@@ -151,19 +153,18 @@ export function PersonPage() {
                 setNameInput(bundle.person.displayName);
               }}
               aria-label="Cancel"
-              className="rounded-lg px-3 text-sm text-stone-500"
+              className="flex min-h-10 min-w-10 items-center justify-center rounded-lg text-sm text-stone-500 active:bg-stone-100"
             >
               X
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setEditingName(true)}
-            className="font-display text-2xl font-semibold text-stone-800 hover:text-terracotta"
-          >
-            {bundle.person.displayName}
-          </button>
+          <div className="flex items-center gap-1">
+            <h1 className="min-w-0 flex-1 font-display text-2xl font-semibold text-stone-800">
+              {bundle.person.displayName}
+            </h1>
+            <RowMenu items={[{ label: "Rename", onClick: () => setEditingName(true) }]} />
+          </div>
         )}
         {nameError && <p className="mt-1 text-sm text-terracotta-dark">{nameError}</p>}
       </header>
@@ -189,13 +190,7 @@ export function PersonPage() {
         <div className="mb-1 flex items-baseline gap-2 pr-2">
           <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Topics</h2>
           {!addingTopic && (
-            <button
-              type="button"
-              onClick={() => setAddingTopic(true)}
-              className="text-xs text-stone-400 hover:text-stone-600 hover:underline"
-            >
-              add a topic
-            </button>
+            <SectionAddLink onClick={() => setAddingTopic(true)}>add a topic</SectionAddLink>
           )}
         </div>
         {addingTopic && (
