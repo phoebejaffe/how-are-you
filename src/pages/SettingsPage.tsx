@@ -5,10 +5,11 @@ import { downloadJson } from "../domain/importExport";
 import * as repo from "../storage/repository";
 import { useAppStore } from "../store/appStore";
 import { useToastStore } from "../store/toastStore";
-import type { ImportConflict, ImportConflictResolution, PersonBundle } from "../types";
+import type { ImportConflict, ImportConflictResolution, PeopleFolder, PersonBundle } from "../types";
 
 export function SettingsPage() {
   const people = useAppStore((s) => s.people);
+  const peopleFolders = useAppStore((s) => s.peopleFolders);
   const loadBundle = useAppStore((s) => s.loadBundle);
   const importFile = useAppStore((s) => s.importFile);
   const applyImportResolutions = useAppStore((s) => s.applyImportResolutions);
@@ -19,6 +20,7 @@ export function SettingsPage() {
   const [conflictIndex, setConflictIndex] = useState(0);
   const [resolutions, setResolutions] = useState<Map<string, ImportConflictResolution>>(new Map());
   const [pendingImport, setPendingImport] = useState<PersonBundle[] | null>(null);
+  const [pendingImportFolders, setPendingImportFolders] = useState<PeopleFolder[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,6 +42,7 @@ export function SettingsPage() {
       schemaVersion: 1 as const,
       exportedAtIso: new Date().toISOString(),
       people: bundles.filter((b) => selected.has(b.person.nameKey)),
+      peopleFolders,
     };
     const date = new Date().toISOString().slice(0, 10);
     downloadJson(`how-are-you-export-${date}.json`, payload);
@@ -51,7 +54,7 @@ export function SettingsPage() {
     e.target.value = "";
 
     try {
-      const { conflicts: found, newPeople } = await importFile(file);
+      const { conflicts: found, newPeople, peopleFolders: importedFolders } = await importFile(file);
       const allImported = [...found.map((c) => c.imported), ...newPeople];
       setPendingImport(allImported);
 
@@ -59,8 +62,9 @@ export function SettingsPage() {
         setConflicts(found);
         setConflictIndex(0);
         setResolutions(new Map());
+        setPendingImportFolders(importedFolders);
       } else {
-        await finishImport(allImported, new Map());
+        await finishImport(allImported, new Map(), importedFolders);
       }
     } catch (err) {
       addToast(err instanceof Error ? err.message : "Import failed.", "error");
@@ -70,10 +74,12 @@ export function SettingsPage() {
   async function finishImport(
     imported: PersonBundle[],
     finalResolutions: Map<string, ImportConflictResolution>,
+    importedFolders: PeopleFolder[] = pendingImportFolders,
   ) {
-    const stats = await applyImportResolutions(imported, finalResolutions);
+    const stats = await applyImportResolutions(imported, finalResolutions, importedFolders);
     addToast(`Imported ${stats.imported}, merged ${stats.merged}, skipped ${stats.skipped}.`, "success");
     setPendingImport(null);
+    setPendingImportFolders([]);
     setConflicts([]);
   }
 

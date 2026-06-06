@@ -1,6 +1,8 @@
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { useMemo, useState } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
-import { FACT_DRAG_MIME } from "../../lib/factFolders";
+import { factDragId, type FactDragData } from "../dnd/dndIds";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
@@ -10,8 +12,6 @@ export function FactRow({
   fact,
   folders = [],
   draggable = false,
-  onDragStart,
-  onDragEnd,
   onPin,
   onDelete,
   onEdit,
@@ -20,8 +20,6 @@ export function FactRow({
   fact: Fact;
   folders?: FactFolder[];
   draggable?: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
   onPin: () => void;
   onDelete: () => void;
   onEdit: (text: string, channel: Channel) => void;
@@ -29,7 +27,14 @@ export function FactRow({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [dragging, setDragging] = useState(false);
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: factDragId(fact.id),
+    data: { type: "fact", factId: fact.id } satisfies FactDragData,
+    disabled: !draggable || editing,
+  });
+
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
 
   const menuItems = useMemo((): RowMenuItem[] => {
     const items: RowMenuItem[] = [
@@ -57,28 +62,6 @@ export function FactRow({
     return items;
   }, [fact.folderId, fact.pinned, folders, onMoveToFolder, onPin]);
 
-  const dragHandle =
-    draggable && !editing ? (
-      <button
-        type="button"
-        draggable
-        aria-label="Drag to move"
-        className="mt-0.5 shrink-0 cursor-grab touch-none rounded px-0.5 text-stone-300 active:cursor-grabbing hover:text-stone-500"
-        onDragStart={(e) => {
-          e.dataTransfer.setData(FACT_DRAG_MIME, fact.id);
-          e.dataTransfer.effectAllowed = "move";
-          setDragging(true);
-          onDragStart?.();
-        }}
-        onDragEnd={() => {
-          setDragging(false);
-          onDragEnd?.();
-        }}
-      >
-        ⠿
-      </button>
-    ) : null;
-
   if (editing) {
     return (
       <div className="py-2 pl-2">
@@ -98,9 +81,14 @@ export function FactRow({
 
   return (
     <>
-      <div className={dragging ? "opacity-40" : undefined}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`touch-none select-none ${isDragging ? "z-10 opacity-40" : ""}`}
+        {...(draggable ? listeners : {})}
+        {...(draggable ? attributes : {})}
+      >
         <EntryRow
-          leading={dragHandle}
           text={fact.text}
           timestampIso={fact.recordedAtIso}
           pinned={fact.pinned}

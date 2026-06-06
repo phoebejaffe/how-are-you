@@ -102,7 +102,11 @@ export function EntryRow({
             {meta}
           </span>
         )}
-        <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <RowMenu items={menuItems} />
         </div>
       </div>

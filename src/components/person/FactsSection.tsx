@@ -1,5 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
+import {
+  folderIdFromDropId,
+  folderIdFromSortId,
+  folderSortId,
+  isFactDragId,
+  isFolderDropId,
+  isFolderSortId,
+} from "../dnd/dndIds";
+import { useAppDndSensors } from "../dnd/dndSensors";
 import {
   groupUnpinnedFacts,
   moveUnsortedToEnd,
@@ -40,15 +57,13 @@ export function FactsSection({
   onToggleFolderCollapsed: (folderId: string) => void;
   onReorderLayout: (draggedId: string, targetId: string) => void;
 }) {
+  const sensors = useAppDndSensors();
   const [factText, setFactText] = useState("");
   const [targetFolderId, setTargetFolderId] = useState("");
   const [addingFact, setAddingFact] = useState(false);
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
-  const [draggingFactId, setDraggingFactId] = useState<string | null>(null);
-  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
-  const [factDropTargetId, setFactDropTargetId] = useState<string | null>(null);
-  const [folderReorderTargetId, setFolderReorderTargetId] = useState<string | null>(null);
+  const [activeFactId, setActiveFactId] = useState<string | null>(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
 
   const grouped = useMemo(() => groupUnpinnedFacts(unpinnedFacts, folders), [unpinnedFacts, folders]);
@@ -59,6 +74,7 @@ export function FactsSection({
     () => resolveFactsLayoutOrder(personKey, folders),
     [personKey, folders, layoutVersion],
   );
+  const sortableIds = useMemo(() => layoutOrder.map((id) => folderSortId(id)), [layoutOrder]);
 
   const folderFactsMap = useMemo(() => {
     const map = new Map<string, Fact[]>();
@@ -70,7 +86,7 @@ export function FactsSection({
 
   const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
 
-  const unsortedVisible = grouped.unsorted.length > 0 || draggingFactId !== null;
+  const unsortedVisible = grouped.unsorted.length > 0 || activeFactId !== null;
   const wasUnsortedVisibleRef = useRef(unsortedVisible);
 
   useEffect(() => {
@@ -82,72 +98,49 @@ export function FactsSection({
     wasUnsortedVisibleRef.current = unsortedVisible;
   }, [unsortedVisible, personKey, folders]);
 
-  const handleFactDragStart = useCallback((factId: string) => {
-    setDraggingFactId(factId);
-    setDraggingFolderId(null);
-    setFolderReorderTargetId(null);
-  }, []);
+  const activeFact = activeFactId ? unpinnedFacts.find((f) => f.id === activeFactId) : null;
 
-  const handleFactDragEnd = useCallback(() => {
-    setDraggingFactId(null);
-    setFactDropTargetId(null);
-  }, []);
+  function handleDragStart(event: DragStartEvent) {
+    const id = String(event.active.id);
+    if (isFactDragId(id)) {
+      setActiveFactId(id.slice("fact:".length));
+    }
+  }
 
-  const handleFolderDragStart = useCallback((folderId: string) => {
-    setDraggingFolderId(folderId);
-    setDraggingFactId(null);
-    setFactDropTargetId(null);
-  }, []);
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveFactId(null);
+    if (!over) return;
 
-  const handleFolderDragEnd = useCallback(() => {
-    setDraggingFolderId(null);
-    setFolderReorderTargetId(null);
-  }, []);
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
-  const handleFactDrop = useCallback(
-    (targetId: string) => {
-      const factId = draggingFactId;
-      handleFactDragEnd();
-      if (!factId) return;
+    if (isFactDragId(activeId)) {
+      const factId = activeId.slice("fact:".length);
+      let targetFolderId: string | null | undefined;
 
-      const fact = unpinnedFacts.find((f) => f.id === factId);
-      if (!fact) return;
+      if (isFolderDropId(overId)) {
+        targetFolderId = folderIdFromDropId(overId);
+      } else if (isFolderSortId(overId)) {
+        const folderId = folderIdFromSortId(overId);
+        targetFolderId = folderId === UNSORTED_DROP_ID ? null : folderId;
+      }
 
-      const targetFolderId = targetId === UNSORTED_DROP_ID ? null : targetId;
-      const currentFolderId = fact.folderId ?? null;
-      if (currentFolderId === targetFolderId) return;
+      if (targetFolderId !== undefined) {
+        const fact = unpinnedFacts.find((f) => f.id === factId);
+        const currentFolderId = fact?.folderId ?? null;
+        if (fact && currentFolderId !== targetFolderId) {
+          onMoveToFolder(factId, targetFolderId);
+        }
+      }
+      return;
+    }
 
-      onMoveToFolder(factId, targetFolderId);
-    },
-    [draggingFactId, handleFactDragEnd, onMoveToFolder, unpinnedFacts],
-  );
-
-  const handleFolderDrop = useCallback(
-    (targetId: string) => {
-      const draggedId = draggingFolderId;
-      handleFolderDragEnd();
-      if (!draggedId || draggedId === targetId) return;
-      onReorderLayout(draggedId, targetId);
+    if (isFolderSortId(activeId) && isFolderSortId(overId) && activeId !== overId) {
+      onReorderLayout(folderIdFromSortId(activeId), folderIdFromSortId(overId));
       setLayoutVersion((v) => v + 1);
-    },
-    [draggingFolderId, handleFolderDragEnd, onReorderLayout],
-  );
-
-  const handleFactDragOver = useCallback(
-    (targetId: string) => {
-      if (!draggingFactId) return;
-      setFactDropTargetId(targetId);
-    },
-    [draggingFactId],
-  );
-
-  const handleFolderDragOver = useCallback(
-    (targetId: string) => {
-      if (!draggingFolderId || draggingFolderId === targetId) return;
-      setFolderReorderTargetId(targetId);
-    },
-    [draggingFolderId],
-  );
+    }
+  }
 
   return (
     <section className="mb-3">
@@ -175,56 +168,54 @@ export function FactsSection({
       </div>
 
       {addingFact && (
-        <>
-          <form
-            className="my-1 flex flex-wrap items-center gap-1 px-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const trimmed = factText.trim();
-              if (!trimmed) return;
-              onAddFact(trimmed, targetFolderId || undefined);
+        <form
+          className="my-1 flex flex-wrap items-center gap-1 px-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = factText.trim();
+            if (!trimmed) return;
+            onAddFact(trimmed, targetFolderId || undefined);
+            setFactText("");
+            setAddingFact(false);
+          }}
+        >
+          <input
+            value={factText}
+            onChange={(e) => setFactText(e.target.value)}
+            placeholder="add a fact"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+            autoFocus
+          />
+          {hasFolders && (
+            <select
+              value={targetFolderId}
+              onChange={(e) => setTargetFolderId(e.target.value)}
+              className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
+              aria-label="Folder"
+            >
+              <option value="">Unsorted</option>
+              {folders.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setFactText("");
               setAddingFact(false);
             }}
+            aria-label="Cancel"
+            className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
           >
-            <input
-              value={factText}
-              onChange={(e) => setFactText(e.target.value)}
-              placeholder="add a fact"
-              className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
-              autoFocus
-            />
-            {hasFolders && (
-              <select
-                value={targetFolderId}
-                onChange={(e) => setTargetFolderId(e.target.value)}
-                className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
-                aria-label="Folder"
-              >
-                <option value="">Unsorted</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
-              Add
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFactText("");
-                setAddingFact(false);
-              }}
-              aria-label="Cancel"
-              className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
-            >
-              X
-            </button>
-          </form>
-        </>
+            X
+          </button>
+        </form>
       )}
 
       {addingFolder && (
@@ -266,70 +257,58 @@ export function FactsSection({
       <div className="rounded-lg bg-white/40 px-1 py-1">
         {!hasAnyFacts && <p className="px-2 py-2 text-center text-xs text-stone-400">No facts yet.</p>}
 
-        {layoutOrder.map((itemId) => {
-          if (itemId === UNSORTED_DROP_ID) {
-            if (!unsortedVisible) return null;
-            return (
-              <UnsortedFactsSection
-                key={itemId}
-                facts={grouped.unsorted}
-                folders={folders}
-                isFactDragging={draggingFactId !== null}
-                isFactDropTarget={factDropTargetId === UNSORTED_DROP_ID}
-                isFolderReorderTarget={folderReorderTargetId === UNSORTED_DROP_ID}
-                isFolderDragging={draggingFolderId === UNSORTED_DROP_ID}
-                onPin={onPin}
-                onDeleteFact={onDeleteFact}
-                onEdit={onEdit}
-                onMoveToFolder={onMoveToFolder}
-                onFactDragStart={handleFactDragStart}
-                onFactDragEnd={handleFactDragEnd}
-                onFactDragOver={handleFactDragOver}
-                onFactDragLeave={(id) => setFactDropTargetId((current) => (current === id ? null : current))}
-                onFactDrop={handleFactDrop}
-                onFolderDragStart={handleFolderDragStart}
-                onFolderDragEnd={handleFolderDragEnd}
-                onFolderDragOver={handleFolderDragOver}
-                onFolderDragLeave={(id) => setFolderReorderTargetId((current) => (current === id ? null : current))}
-                onFolderDrop={handleFolderDrop}
-              />
-            );
-          }
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            {layoutOrder.map((itemId) => {
+              if (itemId === UNSORTED_DROP_ID) {
+                if (!unsortedVisible) return null;
+                return (
+                  <UnsortedFactsSection
+                    key={itemId}
+                    facts={grouped.unsorted}
+                    folders={folders}
+                    onPin={onPin}
+                    onDeleteFact={onDeleteFact}
+                    onEdit={onEdit}
+                    onMoveToFolder={onMoveToFolder}
+                  />
+                );
+              }
 
-          const folder = folderMap.get(itemId);
-          if (!folder) return null;
-          const facts = folderFactsMap.get(itemId) ?? [];
+              const folder = folderMap.get(itemId);
+              if (!folder) return null;
 
-          return (
-            <FactFolderSection
-              key={itemId}
-              folder={folder}
-              facts={facts}
-              allFolders={folders}
-              isFactDragging={draggingFactId !== null}
-              isFactDropTarget={factDropTargetId === folder.id}
-              isFolderReorderTarget={folderReorderTargetId === folder.id}
-              isFolderDragging={draggingFolderId === folder.id}
-              onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
-              onRename={(name) => onRenameFolder(folder.id, name)}
-              onDelete={() => onDeleteFolder(folder.id)}
-              onPin={onPin}
-              onDeleteFact={onDeleteFact}
-              onEdit={onEdit}
-              onMoveToFolder={onMoveToFolder}
-              onFactDragStart={handleFactDragStart}
-              onFactDragEnd={handleFactDragEnd}
-              onFactDragOver={handleFactDragOver}
-              onFactDragLeave={(id) => setFactDropTargetId((current) => (current === id ? null : current))}
-              onFactDrop={handleFactDrop}
-              onFolderDragStart={handleFolderDragStart}
-              onFolderDragEnd={handleFolderDragEnd}
-              onFolderDragOver={handleFolderDragOver}
-              onFolderDragLeave={(id) => setFolderReorderTargetId((current) => (current === id ? null : current))}
-              onFolderDrop={handleFolderDrop}
-            />
-          );
-        })}
+              return (
+                <FactFolderSection
+                  key={itemId}
+                  folder={folder}
+                  facts={folderFactsMap.get(itemId) ?? []}
+                  allFolders={folders}
+                  onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
+                  onRename={(name) => onRenameFolder(folder.id, name)}
+                  onDelete={() => onDeleteFolder(folder.id)}
+                  onPin={onPin}
+                  onDeleteFact={onDeleteFact}
+                  onEdit={onEdit}
+                  onMoveToFolder={onMoveToFolder}
+                />
+              );
+            })}
+          </SortableContext>
+
+          <DragOverlay dropAnimation={null}>
+            {activeFact ? (
+              <div className="rounded-lg bg-white/95 px-3 py-2 text-sm shadow-md ring-1 ring-sage/40">
+                {activeFact.text}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     </section>
   );

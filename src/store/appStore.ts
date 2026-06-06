@@ -16,15 +16,23 @@ import {
   resolveFactsLayoutOrder,
   saveFactsLayoutOrder,
 } from "../lib/factFolders";
+import { bumpLastActivity } from "../lib/lastActivity";
+import {
+  foldersFromLayoutOrder as peopleFoldersFromLayoutOrder,
+  resolvePeopleLayoutOrder,
+  savePeopleLayoutOrder,
+} from "../lib/peopleFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
+  ActivityType,
   Channel,
   Fact,
   FactFolder,
   FollowUp,
   ImportConflictResolution,
+  PeopleFolder,
   Person,
   PersonBundle,
   Topic,
@@ -34,6 +42,7 @@ import { useToastStore } from "./toastStore";
 interface AppState {
   ready: boolean;
   people: Person[];
+  peopleFolders: PeopleFolder[];
   bundles: Record<string, PersonBundle>;
   pendingDeletes: Set<string>;
   pendingTopicDeletes: Set<string>;
@@ -65,6 +74,12 @@ interface AppState {
   deleteFactFolder: (folderId: string) => Promise<void>;
   toggleFactFolderCollapsed: (folderId: string) => Promise<void>;
   reorderFactsLayout: (personKey: string, draggedId: string, targetId: string) => Promise<void>;
+  addPeopleFolder: (name: string) => Promise<void>;
+  renamePeopleFolder: (folderId: string, name: string) => Promise<void>;
+  deletePeopleFolder: (folderId: string) => Promise<void>;
+  togglePeopleFolderCollapsed: (folderId: string) => Promise<void>;
+  movePersonToFolder: (nameKey: string, folderId: string | null) => Promise<void>;
+  reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
@@ -72,10 +87,12 @@ interface AppState {
   importFile: (file: File) => Promise<{
     newPeople: PersonBundle[];
     conflicts: ReturnType<typeof findImportConflicts>;
+    peopleFolders: PeopleFolder[];
   }>;
   applyImportResolutions: (
     importedPeople: PersonBundle[],
     resolutions: Map<string, ImportConflictResolution>,
+    peopleFolders?: PeopleFolder[],
   ) => Promise<{ imported: number; merged: number; skipped: number }>;
 }
 
@@ -115,9 +132,38 @@ function showUndoToast(action: UndoAction, onUndo: () => void, onCommit: () => v
   });
 }
 
+async function syncPersonActivity(
+  nameKey: string,
+  set: (fn: (state: AppState) => Partial<AppState>) => void,
+) {
+  const updated = await repo.refreshPersonActivity(nameKey);
+  if (!updated) return;
+  set((state) => ({
+    people: state.people.map((person) => (person.nameKey === nameKey ? updated : person)),
+  }));
+}
+
+async function bumpPersonActivityInStore(
+  nameKey: string,
+  at: string,
+  type: ActivityType,
+  get: () => AppState,
+  set: (fn: (state: AppState) => Partial<AppState>) => void,
+) {
+  const person = get().people.find((p) => p.nameKey === nameKey);
+  if (!person) return;
+  const updated = bumpLastActivity(person, at, type);
+  if (updated === person) return;
+  await repo.savePerson(updated);
+  set((state) => ({
+    people: state.people.map((p) => (p.nameKey === nameKey ? updated : p)),
+  }));
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   ready: false,
   people: [],
+  peopleFolders: [],
   bundles: {},
   pendingDeletes: new Set(),
   pendingTopicDeletes: new Set(),
@@ -126,8 +172,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   pendingArchives: new Set(),
 
   async hydrate() {
-    const people = await repo.listPeople();
-    set({ people, ready: true });
+    const [people, peopleFolders] = await Promise.all([repo.listPeople(), repo.listPeopleFolders()]);
+    set({ people, peopleFolders, ready: true });
     await get().restorePersistedUndos();
   },
 
@@ -249,6 +295,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     await repo.saveTopic(topic);
     await get().loadBundle(nameKey);
+    await bumpPersonActivityInStore(nameKey, topic.createdAtIso, "topic", get, set);
   },
 
   async scheduleArchiveTopic(topicId) {
@@ -335,6 +382,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { pendingTopicDeletes };
       });
       await get().loadBundle(personKey);
+      await syncPersonActivity(personKey, set);
     };
 
     const undo = async () => {
@@ -387,6 +435,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     await repo.saveFollowUp(followUp);
     await get().loadBundle(personKey);
+    await bumpPersonActivityInStore(personKey, followUp.recordedAtIso, "follow_up", get, set);
   },
 
   async updateFollowUp(followUpId, text, channel) {
@@ -426,6 +475,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { pendingFollowUpDeletes };
       });
       await get().loadBundle(personKey);
+      await syncPersonActivity(personKey, set);
     };
 
     const undo = async () => {
@@ -458,6 +508,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     await repo.saveFact(fact);
     await get().loadBundle(nameKey);
+    await bumpPersonActivityInStore(nameKey, fact.recordedAtIso, "fact", get, set);
   },
 
   async updateFact(factId, text, channel) {
@@ -566,6 +617,97 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().loadBundle(personKey);
   },
 
+  async addPeopleFolder(name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const folders = get().peopleFolders;
+    const maxOrder = folders.reduce((max, folder) => Math.max(max, folder.sortOrder), -1);
+    const folder: PeopleFolder = {
+      id: createId(),
+      name: trimmed,
+      collapsed: false,
+      sortOrder: maxOrder + 1,
+    };
+    await repo.savePeopleFolder(folder);
+    set({ peopleFolders: [...folders, folder].sort((a, b) => a.sortOrder - b.sortOrder) });
+  },
+
+  async renamePeopleFolder(folderId, name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const folder = get().peopleFolders.find((f) => f.id === folderId);
+    if (!folder) return;
+    const updated = { ...folder, name: trimmed };
+    await repo.savePeopleFolder(updated);
+    set({
+      peopleFolders: get()
+        .peopleFolders.map((f) => (f.id === folderId ? updated : f))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    });
+  },
+
+  async deletePeopleFolder(folderId) {
+    const peopleInFolder = get().people.filter((p) => p.folderId === folderId);
+    for (const person of peopleInFolder) {
+      const next = { ...person };
+      delete next.folderId;
+      await repo.savePerson(next);
+    }
+    await repo.deletePeopleFolderHard(folderId);
+    set({
+      people: get().people.map((person) => {
+        if (person.folderId !== folderId) return person;
+        const next = { ...person };
+        delete next.folderId;
+        return next;
+      }),
+      peopleFolders: get().peopleFolders.filter((f) => f.id !== folderId),
+    });
+  },
+
+  async togglePeopleFolderCollapsed(folderId) {
+    const folder = get().peopleFolders.find((f) => f.id === folderId);
+    if (!folder) return;
+    const updated = { ...folder, collapsed: !folder.collapsed };
+    await repo.savePeopleFolder(updated);
+    set({
+      peopleFolders: get().peopleFolders.map((f) => (f.id === folderId ? updated : f)),
+    });
+  },
+
+  async movePersonToFolder(nameKey, folderId) {
+    const person = get().people.find((p) => p.nameKey === nameKey);
+    if (!person) return;
+    if (folderId && !get().peopleFolders.some((f) => f.id === folderId)) return;
+
+    const next = { ...person };
+    if (folderId) next.folderId = folderId;
+    else delete next.folderId;
+
+    await repo.savePerson(next);
+    set({
+      people: get().people.map((p) => (p.nameKey === nameKey ? next : p)),
+    });
+  },
+
+  async reorderPeopleLayout(draggedId, targetId) {
+    if (draggedId === targetId) return;
+
+    const folders = get().peopleFolders;
+    const currentOrder = resolvePeopleLayoutOrder(folders);
+    const nextOrder = reorderLayoutItems(currentOrder, draggedId, targetId);
+    savePeopleLayoutOrder(nextOrder);
+
+    const reorderedFolders = peopleFoldersFromLayoutOrder(folders, nextOrder);
+    for (const folder of reorderedFolders) {
+      const prev = folders.find((f) => f.id === folder.id);
+      if (prev && prev.sortOrder !== folder.sortOrder) {
+        await repo.savePeopleFolder(folder);
+      }
+    }
+    set({ peopleFolders: reorderedFolders });
+  },
+
   async scheduleDeleteFact(factId) {
     const personKey = bundleKeyForFact(get().bundles, factId);
     if (!personKey) return;
@@ -589,6 +731,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { pendingFactDeletes };
       });
       await get().loadBundle(personKey);
+      await syncPersonActivity(personKey, set);
     };
 
     const undo = async () => {
@@ -697,10 +840,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const conflicts = findImportConflicts(payload.people, existing);
     const conflictKeys = new Set(conflicts.map((c) => c.imported.person.nameKey));
     const newPeople = payload.people.filter((p) => !existingKeys.has(p.person.nameKey) && !conflictKeys.has(p.person.nameKey));
-    return { newPeople, conflicts };
+    return { newPeople, conflicts, peopleFolders: payload.peopleFolders ?? [] };
   },
 
-  async applyImportResolutions(importedPeople, resolutions) {
+  async applyImportResolutions(importedPeople, resolutions, peopleFolders = []) {
     const existing = await repo.listAllBundles();
     const existingByKey = new Map(existing.map((b) => [b.person.nameKey, b]));
     let imported = 0;
@@ -727,6 +870,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         await repo.replacePersonBundle(key, mergePersonBundles(existingBundle, bundle));
         mergedCount++;
       }
+    }
+
+    if (peopleFolders.length > 0) {
+      for (const folder of peopleFolders) {
+        await repo.savePeopleFolder(folder);
+      }
+      set({ peopleFolders: await repo.listPeopleFolders() });
     }
 
     await get().hydrate();

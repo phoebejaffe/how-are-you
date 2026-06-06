@@ -1,10 +1,72 @@
-import type { Fact, FactFolder, FollowUp, Person, PersonBundle, Topic } from "../types";
+import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
+import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, PersonBundle, Topic } from "../types";
 import { getDb } from "./db";
+
+async function enrichPersonActivity(person: Person): Promise<Person> {
+  if (person.lastActivityAtIso && person.lastActivityType) return person;
+
+  const db = await getDb();
+  const topics = await db.getAllFromIndex("topics", "by-person", person.nameKey);
+  const facts = await db.getAllFromIndex("facts", "by-person", person.nameKey);
+  const followUps: FollowUp[] = [];
+  for (const topic of topics) {
+    followUps.push(...(await db.getAllFromIndex("followUps", "by-topic", topic.id)));
+  }
+
+  const activity = computeLastActivityFromData({ topics, followUps, facts });
+  if (!activity) return person;
+
+  const enriched = withLastActivity(person, activity);
+  await db.put("people", enriched);
+  return enriched;
+}
 
 export async function listPeople(): Promise<Person[]> {
   const db = await getDb();
   const people = await db.getAll("people");
-  return people.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const enriched = await Promise.all(people.map((person) => enrichPersonActivity(person)));
+  return enriched.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+export async function listPeopleFolders(): Promise<PeopleFolder[]> {
+  const db = await getDb();
+  const folders = await db.getAll("peopleFolders");
+  return folders.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+}
+
+export async function savePeopleFolder(folder: PeopleFolder): Promise<void> {
+  const db = await getDb();
+  await db.put("peopleFolders", folder);
+}
+
+export async function deletePeopleFolderHard(id: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("peopleFolders", id);
+}
+
+export async function refreshPersonActivity(nameKey: string): Promise<Person | null> {
+  const db = await getDb();
+  const person = await db.get("people", nameKey);
+  if (!person) return null;
+
+  const topics = await db.getAllFromIndex("topics", "by-person", nameKey);
+  const facts = await db.getAllFromIndex("facts", "by-person", nameKey);
+  const followUps: FollowUp[] = [];
+  for (const topic of topics) {
+    followUps.push(...(await db.getAllFromIndex("followUps", "by-topic", topic.id)));
+  }
+
+  const activity = computeLastActivityFromData({ topics, followUps, facts });
+  const updated: Person = activity
+    ? withLastActivity(person, activity)
+    : {
+        ...person,
+        lastActivityAtIso: undefined,
+        lastActivityType: undefined,
+      };
+
+  await db.put("people", updated);
+  return updated;
 }
 
 export async function getPersonBundle(nameKey: string): Promise<PersonBundle | null> {

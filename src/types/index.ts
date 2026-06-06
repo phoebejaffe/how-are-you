@@ -2,11 +2,23 @@ export type Channel = "call" | "text" | "in_person";
 
 export type TopicStatus = "active" | "archived";
 
+export type ActivityType = "topic" | "follow_up" | "fact";
+
 export interface Person {
   nameKey: string;
   displayName: string;
   createdAtIso: string;
   updatedAtIso: string;
+  folderId?: string;
+  lastActivityAtIso?: string;
+  lastActivityType?: ActivityType;
+}
+
+export interface PeopleFolder {
+  id: string;
+  name: string;
+  collapsed: boolean;
+  sortOrder: number;
 }
 
 export interface Topic {
@@ -57,6 +69,7 @@ export interface ExportPayload {
   schemaVersion: 1;
   exportedAtIso: string;
   people: PersonBundle[];
+  peopleFolders?: PeopleFolder[];
 }
 
 export type ImportConflictResolution = "ignore" | "merge" | "override";

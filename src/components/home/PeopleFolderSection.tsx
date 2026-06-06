@@ -1,38 +1,31 @@
+import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
-import type { Channel, Fact, FactFolder } from "../../types";
+import type { PeopleFolder, Person } from "../../types";
 import { folderDropId, folderSortId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { FolderHeader } from "../folders/FolderHeader";
 import { mergeRefs } from "../dnd/mergeRefs";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { FactRow } from "./FactRow";
+import { PersonListRow, sortPeople } from "./PersonListRow";
 
-export function FactFolderSection({
+export function PeopleFolderSection({
   folder,
-  facts,
-  allFolders,
+  people,
   onToggleCollapsed,
   onRename,
   onDelete,
-  onPin,
-  onDeleteFact,
-  onEdit,
-  onMoveToFolder,
+  onDeletePerson,
 }: {
-  folder: FactFolder;
-  facts: Fact[];
-  allFolders: FactFolder[];
+  folder: PeopleFolder;
+  people: Person[];
   onToggleCollapsed: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
-  onPin: (factId: string) => void;
-  onDeleteFact: (factId: string) => void;
-  onEdit: (factId: string, text: string, channel: Channel) => void;
-  onMoveToFolder: (factId: string, folderId: string | null) => void;
+  onDeletePerson: (nameKey: string) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const sortedPeople = sortPeople(people);
 
   const sortable = useSortable({
     id: folderSortId(folder.id),
@@ -53,13 +46,13 @@ export function FactFolderSection({
     <div
       ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`mb-2 rounded-lg transition-shadow ${sortable.isDragging ? "opacity-40" : ""} ${
-        droppable.isOver ? "ring-2 ring-sage/60" : ""
-      }`}
+      className={`mb-2 rounded-lg bg-white/50 ring-1 ring-stone-200/60 transition-shadow ${
+        sortable.isDragging ? "opacity-40" : ""
+      } ${droppable.isOver ? "ring-2 ring-sage/60" : ""}`}
     >
       <FolderHeader
         name={folder.name}
-        count={facts.length}
+        count={people.length}
         collapsed={folder.collapsed}
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         onToggleCollapsed={onToggleCollapsed}
@@ -68,24 +61,24 @@ export function FactFolderSection({
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
       />
 
-      {!folder.collapsed &&
-        facts.map((fact) => (
-          <FactRow
-            key={fact.id}
-            fact={fact}
-            folders={allFolders}
-            draggable
-            onPin={() => onPin(fact.id)}
-            onDelete={() => onDeleteFact(fact.id)}
-            onEdit={(text, ch) => onEdit(fact.id, text, ch)}
-            onMoveToFolder={(folderId) => onMoveToFolder(fact.id, folderId)}
-          />
-        ))}
+      {!folder.collapsed && (
+        <ul className="divide-y divide-stone-200/80">
+          {sortedPeople.map((person) => (
+            <li key={person.nameKey}>
+              <PersonListRow
+                person={person}
+                draggable
+                onDelete={() => onDeletePerson(person.nameKey)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
       <ConfirmDialog
         open={confirmDelete}
         title="Delete folder?"
-        message="Facts in this folder will be moved to Unsorted, not deleted."
+        message="Friends in this folder will be moved to Unsorted, not deleted."
         onConfirm={() => {
           setConfirmDelete(false);
           onDelete();

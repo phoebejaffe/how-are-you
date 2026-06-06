@@ -1,13 +1,21 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { FriendsSection } from "../components/home/FriendsSection";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useAppStore } from "../store/appStore";
 
 export function HomePage() {
   const people = useAppStore((s) => s.people);
+  const peopleFolders = useAppStore((s) => s.peopleFolders);
   const pendingDeletes = useAppStore((s) => s.pendingDeletes);
   const addPerson = useAppStore((s) => s.addPerson);
   const scheduleDeletePerson = useAppStore((s) => s.scheduleDeletePerson);
+  const addPeopleFolder = useAppStore((s) => s.addPeopleFolder);
+  const renamePeopleFolder = useAppStore((s) => s.renamePeopleFolder);
+  const deletePeopleFolder = useAppStore((s) => s.deletePeopleFolder);
+  const togglePeopleFolderCollapsed = useAppStore((s) => s.togglePeopleFolderCollapsed);
+  const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
+  const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
@@ -15,9 +23,7 @@ export function HomePage() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return people
-      .filter((p) => !pendingDeletes.has(p.nameKey))
-      .filter((p) => !q || p.displayName.toLowerCase().includes(q));
+    return people.filter((p) => !pendingDeletes.has(p.nameKey)).filter((p) => !q || p.displayName.toLowerCase().includes(q));
   }, [people, pendingDeletes, query]);
 
   async function handleAdd(e: React.FormEvent) {
@@ -70,29 +76,17 @@ export function HomePage() {
       </form>
       {error && <p className="mb-3 text-sm text-terracotta-dark">{error}</p>}
 
-      <ul className="divide-y divide-stone-200/80 rounded-xl bg-white/50 ring-1 ring-stone-200/60">
-        {visible.length === 0 && (
-          <li className="px-4 py-8 text-center text-sm text-stone-400">No friends yet — add someone above.</li>
-        )}
-        {visible.map((person) => (
-          <li key={person.nameKey} className="group flex items-center">
-            <Link
-              to={`/person/${encodeURIComponent(person.nameKey)}`}
-              className="min-w-0 flex-1 break-words px-4 py-2.5 text-sm font-medium text-stone-800 hover:bg-white/60"
-            >
-              {person.displayName}
-            </Link>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(person.nameKey)}
-              className="mr-2 rounded p-1 text-xs opacity-0 hover:bg-stone-200 group-hover:opacity-100"
-              title="Delete person"
-            >
-              🗑
-            </button>
-          </li>
-        ))}
-      </ul>
+      <FriendsSection
+        people={visible}
+        folders={peopleFolders}
+        onDeletePerson={setDeleteTarget}
+        onMovePersonToFolder={(nameKey, folderId) => void movePersonToFolder(nameKey, folderId)}
+        onAddFolder={(name) => void addPeopleFolder(name)}
+        onRenameFolder={(folderId, name) => void renamePeopleFolder(folderId, name)}
+        onDeleteFolder={(folderId) => void deletePeopleFolder(folderId)}
+        onToggleFolderCollapsed={(folderId) => void togglePeopleFolderCollapsed(folderId)}
+        onReorderLayout={(draggedId, targetId) => void reorderPeopleLayout(draggedId, targetId)}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}
