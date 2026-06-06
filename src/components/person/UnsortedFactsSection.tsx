@@ -5,6 +5,7 @@ import { FactRow } from "./FactRow";
 export function UnsortedFactsSection({
   facts,
   folders,
+  isDragging,
   isDropTarget,
   onPin,
   onDeleteFact,
@@ -18,6 +19,7 @@ export function UnsortedFactsSection({
 }: {
   facts: Fact[];
   folders: FactFolder[];
+  isDragging: boolean;
   isDropTarget: boolean;
   onPin: (factId: string) => void;
   onDeleteFact: (factId: string) => void;
@@ -29,13 +31,15 @@ export function UnsortedFactsSection({
   onDragLeave: (targetId: string) => void;
   onDrop: (targetId: string) => void;
 }) {
-  if (facts.length === 0) return null;
+  if (facts.length === 0 && !isDragging) return null;
+
+  const emptyDropZone = facts.length === 0 && isDragging;
 
   return (
     <div
-      className={`mb-2 rounded-lg bg-stone-100/80 px-1 py-1 transition-shadow ${
-        isDropTarget ? "ring-2 ring-sage/60" : ""
-      }`}
+      className={`rounded-lg bg-stone-100/80 px-1 py-1 transition-shadow ${
+        emptyDropZone ? "min-h-12" : ""
+      } ${isDropTarget ? "ring-2 ring-sage/60" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";

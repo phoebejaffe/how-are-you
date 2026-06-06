@@ -32,3 +32,23 @@ export function groupUnpinnedFacts(
 export const UNSORTED_DROP_ID = "unsorted";
 
 export const FACT_DRAG_MIME = "application/x-how-are-you-fact-id";
+
+export const FOLDER_DRAG_MIME = "application/x-how-are-you-folder-id";
+
+export function reorderFactFolders(
+  folders: FactFolder[],
+  draggedId: string,
+  targetId: string,
+): FactFolder[] {
+  if (draggedId === targetId) return folders;
+
+  const sorted = sortFactFolders(folders);
+  const fromIndex = sorted.findIndex((f) => f.id === draggedId);
+  const toIndex = sorted.findIndex((f) => f.id === targetId);
+  if (fromIndex < 0 || toIndex < 0) return folders;
+
+  const next = [...sorted];
+  const [removed] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, removed);
+  return next.map((folder, index) => ({ ...folder, sortOrder: index }));
+}

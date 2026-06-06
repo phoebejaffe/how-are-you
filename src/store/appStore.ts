@@ -10,6 +10,7 @@ import {
   type UndoAction,
   type UndoSnapshot,
 } from "../domain/undoQueue";
+import { reorderFactFolders } from "../lib/factFolders";
 import { createId, nowIso, personNameKey } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
@@ -56,6 +57,7 @@ interface AppState {
   renameFactFolder: (folderId: string, name: string) => Promise<void>;
   deleteFactFolder: (folderId: string) => Promise<void>;
   toggleFactFolderCollapsed: (folderId: string) => Promise<void>;
+  reorderFactFolder: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
@@ -525,6 +527,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const folder = get().bundles[personKey].factFolders.find((f) => f.id === folderId);
     if (!folder) return;
     await repo.saveFactFolder({ ...folder, collapsed: !folder.collapsed });
+    await get().loadBundle(personKey);
+  },
+
+  async reorderFactFolder(draggedId, targetId) {
+    const personKey = bundleKeyForFactFolder(get().bundles, draggedId);
+    if (!personKey || draggedId === targetId) return;
+    const folders = get().bundles[personKey].factFolders;
+    const reordered = reorderFactFolders(folders, draggedId, targetId);
+
+    for (const folder of reordered) {
+      await repo.saveFactFolder(folder);
+    }
     await get().loadBundle(personKey);
   },
 

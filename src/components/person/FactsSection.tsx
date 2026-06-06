@@ -16,6 +16,7 @@ export function FactsSection({
   onRenameFolder,
   onDeleteFolder,
   onToggleFolderCollapsed,
+  onReorderFolder,
 }: {
   folders: FactFolder[];
   unpinnedFacts: Fact[];
@@ -28,31 +29,47 @@ export function FactsSection({
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onToggleFolderCollapsed: (folderId: string) => void;
+  onReorderFolder: (draggedId: string, targetId: string) => void;
 }) {
   const [factText, setFactText] = useState("");
   const [targetFolderId, setTargetFolderId] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [draggingFactId, setDraggingFactId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
+  const [factDropTargetId, setFactDropTargetId] = useState<string | null>(null);
+  const [folderReorderTargetId, setFolderReorderTargetId] = useState<string | null>(null);
 
   const grouped = useMemo(() => groupUnpinnedFacts(unpinnedFacts, folders), [unpinnedFacts, folders]);
   const hasFolders = folders.length > 0;
   const hasAnyFacts = unpinnedFacts.length > 0 || hasFolders;
 
-  const handleDragStart = useCallback((factId: string) => {
+  const handleFactDragStart = useCallback((factId: string) => {
     setDraggingFactId(factId);
+    setDraggingFolderId(null);
+    setFolderReorderTargetId(null);
   }, []);
 
-  const handleDragEnd = useCallback(() => {
+  const handleFactDragEnd = useCallback(() => {
     setDraggingFactId(null);
-    setDropTargetId(null);
+    setFactDropTargetId(null);
   }, []);
 
-  const handleDrop = useCallback(
+  const handleFolderDragStart = useCallback((folderId: string) => {
+    setDraggingFolderId(folderId);
+    setDraggingFactId(null);
+    setFactDropTargetId(null);
+  }, []);
+
+  const handleFolderDragEnd = useCallback(() => {
+    setDraggingFolderId(null);
+    setFolderReorderTargetId(null);
+  }, []);
+
+  const handleFactDrop = useCallback(
     (targetId: string) => {
       const factId = draggingFactId;
-      handleDragEnd();
+      handleFactDragEnd();
       if (!factId) return;
 
       const fact = unpinnedFacts.find((f) => f.id === factId);
@@ -64,7 +81,33 @@ export function FactsSection({
 
       onMoveToFolder(factId, targetFolderId);
     },
-    [draggingFactId, handleDragEnd, onMoveToFolder, unpinnedFacts],
+    [draggingFactId, handleFactDragEnd, onMoveToFolder, unpinnedFacts],
+  );
+
+  const handleFolderDrop = useCallback(
+    (targetId: string) => {
+      const draggedId = draggingFolderId;
+      handleFolderDragEnd();
+      if (!draggedId || draggedId === targetId) return;
+      onReorderFolder(draggedId, targetId);
+    },
+    [draggingFolderId, handleFolderDragEnd, onReorderFolder],
+  );
+
+  const handleFactDragOver = useCallback(
+    (targetId: string) => {
+      if (!draggingFactId) return;
+      setFactDropTargetId(targetId);
+    },
+    [draggingFactId],
+  );
+
+  const handleFolderDragOver = useCallback(
+    (targetId: string) => {
+      if (!draggingFolderId || draggingFolderId === targetId) return;
+      setFolderReorderTargetId(targetId);
+    },
+    [draggingFolderId],
   );
 
   return (
@@ -155,28 +198,16 @@ export function FactsSection({
       <div className="rounded-lg bg-white/40 px-1 py-1">
         {!hasAnyFacts && <p className="px-2 py-2 text-center text-xs text-stone-400">No facts yet.</p>}
 
-        <UnsortedFactsSection
-          facts={grouped.unsorted}
-          folders={folders}
-          isDropTarget={dropTargetId === UNSORTED_DROP_ID}
-          onPin={onPin}
-          onDeleteFact={onDeleteFact}
-          onEdit={onEdit}
-          onMoveToFolder={onMoveToFolder}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragOver={setDropTargetId}
-          onDragLeave={(id) => setDropTargetId((current) => (current === id ? null : current))}
-          onDrop={handleDrop}
-        />
-
         {grouped.folders.map(({ folder, facts }) => (
           <FactFolderSection
             key={folder.id}
             folder={folder}
             facts={facts}
             allFolders={folders}
-            isDropTarget={dropTargetId === folder.id}
+            isFactDragging={draggingFactId !== null}
+            isFactDropTarget={factDropTargetId === folder.id}
+            isFolderReorderTarget={folderReorderTargetId === folder.id}
+            isFolderDragging={draggingFolderId === folder.id}
             onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
             onRename={(name) => onRenameFolder(folder.id, name)}
             onDelete={() => onDeleteFolder(folder.id)}
@@ -184,13 +215,34 @@ export function FactsSection({
             onDeleteFact={onDeleteFact}
             onEdit={onEdit}
             onMoveToFolder={onMoveToFolder}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={setDropTargetId}
-            onDragLeave={(id) => setDropTargetId((current) => (current === id ? null : current))}
-            onDrop={handleDrop}
+            onFactDragStart={handleFactDragStart}
+            onFactDragEnd={handleFactDragEnd}
+            onFactDragOver={handleFactDragOver}
+            onFactDragLeave={(id) => setFactDropTargetId((current) => (current === id ? null : current))}
+            onFactDrop={handleFactDrop}
+            onFolderDragStart={handleFolderDragStart}
+            onFolderDragEnd={handleFolderDragEnd}
+            onFolderDragOver={handleFolderDragOver}
+            onFolderDragLeave={(id) => setFolderReorderTargetId((current) => (current === id ? null : current))}
+            onFolderDrop={handleFolderDrop}
           />
         ))}
+
+        <UnsortedFactsSection
+          facts={grouped.unsorted}
+          folders={folders}
+          isDragging={draggingFactId !== null}
+          isDropTarget={factDropTargetId === UNSORTED_DROP_ID}
+          onPin={onPin}
+          onDeleteFact={onDeleteFact}
+          onEdit={onEdit}
+          onMoveToFolder={onMoveToFolder}
+          onDragStart={handleFactDragStart}
+          onDragEnd={handleFactDragEnd}
+          onDragOver={handleFactDragOver}
+          onDragLeave={(id) => setFactDropTargetId((current) => (current === id ? null : current))}
+          onDrop={handleFactDrop}
+        />
       </div>
     </section>
   );

@@ -35,6 +35,7 @@ export function PersonPage() {
   const renameFactFolder = useAppStore((s) => s.renameFactFolder);
   const deleteFactFolder = useAppStore((s) => s.deleteFactFolder);
   const toggleFactFolderCollapsed = useAppStore((s) => s.toggleFactFolderCollapsed);
+  const reorderFactFolder = useAppStore((s) => s.reorderFactFolder);
 
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -258,6 +259,7 @@ export function PersonPage() {
         onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
         onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
         onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
+        onReorderFolder={(draggedId, targetId) => void reorderFactFolder(draggedId, targetId)}
       />
 
       <section>
