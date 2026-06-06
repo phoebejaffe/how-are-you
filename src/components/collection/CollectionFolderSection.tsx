@@ -57,6 +57,7 @@ export function CollectionFolderSection({
         onRename={onRename}
         onDeleteRequest={() => setConfirmDelete(true)}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
+        flush
       />
 
       {!folder.collapsed && <div className="pl-3">{children}</div>}

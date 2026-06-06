@@ -35,7 +35,7 @@ export function CollectionUnsortedSection({
     <div
       ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`mb-2 rounded-lg bg-stone-100/80 px-1 py-1 transition-shadow ${
+      className={`mb-2 rounded-lg bg-stone-100/80 py-1 transition-shadow ${
         sortable.isDragging ? "opacity-40" : ""
       } ${droppable.isOver ? "ring-2 ring-sage/60" : ""} ${itemCount === 0 ? "min-h-12" : ""}`}
     >
@@ -44,6 +44,7 @@ export function CollectionUnsortedSection({
         count={itemCount}
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
+        flush
       />
       <div className="pl-3">{children}</div>
     </div>

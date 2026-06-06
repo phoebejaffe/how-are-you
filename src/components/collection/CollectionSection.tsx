@@ -283,14 +283,18 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
 
   return (
     <section className="mb-3">
-      <div className="mb-1 flex items-baseline gap-2 pr-2">
+      <div className="-mx-2 mb-1 flex items-center gap-2 rounded bg-gray-200 px-2 py-0.5">
         <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">{title}</h2>
-        {!addingItem && <SectionAddLink onClick={() => setAddingItem(true)}>{addLinkLabel}</SectionAddLink>}
+        {!addingItem && (
+          <SectionAddLink compact onClick={() => setAddingItem(true)}>
+            {addLinkLabel}
+          </SectionAddLink>
+        )}
         {(headerMenu || (useFolders && features.folderCreate && onAddFolder && !addingFolder)) && (
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
             {headerMenu}
             {useFolders && features.folderCreate && onAddFolder && !addingFolder && (
-              <IconButton onClick={() => setAddingFolder(true)} aria-label="New folder">
+              <IconButton compact onClick={() => setAddingFolder(true)} aria-label="New folder">
                 <FolderPlusIcon />
               </IconButton>
             )}
@@ -341,8 +345,8 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
         </form>
       )}
 
-      <div className="rounded-lg bg-white/40 px-1 py-1">
-        {!hasAnyItems && <p className="px-2 py-2 text-center text-xs text-stone-400">{emptyMessage}</p>}
+      <div>
+        {!hasAnyItems && <p className="px-1 py-2 text-center text-xs text-stone-400">{emptyMessage}</p>}
         {listContent}
       </div>
     </section>

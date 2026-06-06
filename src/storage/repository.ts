@@ -1,9 +1,20 @@
-import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
 import { withFactSortOrders } from "../lib/factOrder";
+import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
 import { withPersonSortOrders } from "../lib/personOrder";
 import { withTopicSortOrders } from "../lib/topicOrder";
-import type { Fact, FactFolder, FollowUp, PeopleFolder, Person, PersonBundle, Topic, TopicFolder } from "../types";
+import type {
+  Fact,
+  FactFolder,
+  FollowUp,
+  PeopleFolder,
+  Person,
+  PersonBundle,
+  Topic,
+  TopicFolder,
+} from "../types";
 import { getDb } from "./db";
+
+const PERSON_STORES = ["people", "topics", "followUps", "facts", "factFolders", "topicFolders"] as const;
 
 async function enrichPersonActivity(person: Person): Promise<Person> {
   if (person.lastActivityAtIso && person.lastActivityType) return person;
@@ -24,22 +35,33 @@ async function enrichPersonActivity(person: Person): Promise<Person> {
   return enriched;
 }
 
-function withFactSortOrdersLegacy(facts: Fact[]): Fact[] {
-  return withFactSortOrders(facts);
+async function persistNormalized<T extends Topic | Fact>(
+  store: "topics" | "facts",
+  original: T[],
+  normalized: T[],
+  compare: (prev: T, next: T) => boolean,
+): Promise<void> {
+  const db = await getDb();
+  for (const item of normalized) {
+    const prev = original.find((entry) => entry.id === item.id);
+    if (prev && compare(prev, item)) {
+      await db.put(store, item);
+    }
+  }
 }
 
 export async function listPeople(): Promise<Person[]> {
   const db = await getDb();
   const people = await db.getAll("people");
-  const withSort = withPersonSortOrders(people);
-  for (const person of withSort) {
-    const prev = people.find((entry) => entry.nameKey === person.nameKey);
+  const enriched = await Promise.all(people.map((person) => enrichPersonActivity(person)));
+  const normalized = withPersonSortOrders(enriched);
+  for (const person of normalized) {
+    const prev = enriched.find((p) => p.nameKey === person.nameKey);
     if (prev && prev.sortOrder !== person.sortOrder) {
       await db.put("people", person);
     }
   }
-  const enriched = await Promise.all(withSort.map((person) => enrichPersonActivity(person)));
-  return enriched.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  return normalized.sort((a, b) => a.displayName.localeCompare(b.displayName));
 }
 
 export async function listPeopleFolders(): Promise<PeopleFolder[]> {
@@ -104,20 +126,10 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
   followUps.sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso));
 
   const normalizedTopics = withTopicSortOrders(topics);
-  for (const topic of normalizedTopics) {
-    const prev = topics.find((t) => t.id === topic.id);
-    if (prev && prev.sortOrder !== topic.sortOrder) {
-      await db.put("topics", topic);
-    }
-  }
+  await persistNormalized("topics", topics, normalizedTopics, (prev, next) => prev.sortOrder !== next.sortOrder);
 
-  const normalizedFacts = withFactSortOrdersLegacy(facts);
-  for (const fact of normalizedFacts) {
-    const prev = facts.find((entry) => entry.id === fact.id);
-    if (prev && prev.sortOrder !== fact.sortOrder) {
-      await saveFact(fact);
-    }
-  }
+  const normalizedFacts = withFactSortOrders(facts);
+  await persistNormalized("facts", facts, normalizedFacts, (prev, next) => prev.sortOrder !== next.sortOrder);
 
   return {
     person,
@@ -177,7 +189,7 @@ export async function deleteTopicFolderHard(id: string): Promise<void> {
 
 export async function deletePersonHard(nameKey: string): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders", "topicFolders"], "readwrite");
+  const tx = db.transaction([...PERSON_STORES], "readwrite");
   const topics = await tx.objectStore("topics").index("by-person").getAll(nameKey);
   for (const topic of topics) {
     const followUps = await tx.objectStore("followUps").index("by-topic").getAll(topic.id);
@@ -262,7 +274,7 @@ export async function renamePerson(oldKey: string, newKey: string, displayName: 
 
 export async function savePersonBundle(bundle: PersonBundle): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction(["people", "topics", "followUps", "facts", "factFolders", "topicFolders"], "readwrite");
+  const tx = db.transaction([...PERSON_STORES], "readwrite");
   await tx.objectStore("people").put(bundle.person);
   for (const topic of bundle.topics) {
     await tx.objectStore("topics").put(topic);
@@ -273,10 +285,10 @@ export async function savePersonBundle(bundle: PersonBundle): Promise<void> {
   for (const fact of bundle.facts) {
     await tx.objectStore("facts").put(fact);
   }
-  for (const folder of bundle.factFolders ?? []) {
+  for (const folder of bundle.factFolders) {
     await tx.objectStore("factFolders").put(folder);
   }
-  for (const folder of bundle.topicFolders ?? []) {
+  for (const folder of bundle.topicFolders) {
     await tx.objectStore("topicFolders").put(folder);
   }
   await tx.done;

@@ -12,6 +12,7 @@ export function FolderHeader({
   onRename,
   onDeleteRequest,
   sortableHandleProps,
+  flush = false,
 }: {
   name: string;
   count: number;
@@ -21,7 +22,9 @@ export function FolderHeader({
   onRename: (name: string) => void;
   onDeleteRequest: () => void;
   sortableHandleProps?: HandleProps;
+  flush?: boolean;
 }) {
+  const padX = flush ? "px-0" : "px-1";
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(name);
 
@@ -38,7 +41,7 @@ export function FolderHeader({
 
   return (
     <div
-      className={`flex items-center gap-1 px-1 ${isFolderReorderTarget ? "rounded ring-2 ring-amber-400/80" : ""}`}
+      className={`flex items-center gap-1 ${padX} ${isFolderReorderTarget ? "rounded ring-2 ring-amber-400/80" : ""}`}
     >
       {editingName ? (
         <form
@@ -77,7 +80,7 @@ export function FolderHeader({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className="flex min-h-10 min-w-0 flex-1 cursor-pointer touch-none select-none items-center gap-2 rounded px-1 text-left text-xs font-bold text-stone-600 active:text-stone-800"
+            className={`flex min-h-10 min-w-0 flex-1 cursor-pointer touch-none select-none items-center gap-2 rounded text-left text-xs font-bold text-stone-600 active:text-stone-800 ${flush ? "px-0" : "px-1"}`}
             {...sortableHandleProps}
           >
             <span className="flex min-w-0 flex-1 items-baseline">
@@ -101,18 +104,21 @@ export function UnsortedFolderHeader({
   count,
   isFolderReorderTarget,
   sortableHandleProps,
+  flush = false,
 }: {
   label: string;
   count: number;
   isFolderReorderTarget: boolean;
   sortableHandleProps?: HandleProps;
+  flush?: boolean;
 }) {
+  const padX = flush ? "px-0" : "px-1";
   return (
     <div
-      className={`flex items-center gap-1 px-1 ${isFolderReorderTarget ? "rounded ring-2 ring-amber-400/80" : ""}`}
+      className={`flex items-center gap-1 ${padX} ${isFolderReorderTarget ? "rounded ring-2 ring-amber-400/80" : ""}`}
     >
       <div
-        className="flex min-w-0 flex-1 touch-none select-none items-center gap-2 px-1 py-0.5 text-xs font-bold text-stone-500"
+        className={`flex min-w-0 flex-1 touch-none select-none items-center gap-2 py-0.5 text-xs font-bold text-stone-500 ${padX}`}
         {...sortableHandleProps}
       >
         <span className="min-w-0 truncate">{label}</span>

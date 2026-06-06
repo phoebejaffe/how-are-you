@@ -75,7 +75,7 @@ export function TopicCollectionItem({
   const followUpItemClass = `border-l-2 pl-2 ${archived ? "border-stone-200" : "border-sage/40"}`;
   const folderRefs: CollectionFolderRef[] = folders.map((f) => ({ id: f.id, name: f.name }));
   const showPinnedStyle = topic.pinned && !archived && !pinnedStrip;
-  const followUpActionLinkClass = `border-l-2 pl-4 ${archived ? "border-stone-200" : "border-sage/40"}`;
+  const followUpActionLinkClass = `border-l-2 pl-2 ${archived ? "border-stone-200" : "border-sage/40"}`;
 
   useEffect(() => {
     if (archived) {
@@ -132,7 +132,7 @@ export function TopicCollectionItem({
       />
 
       {followUpsExpanded && canShowFollowUpSection && (
-        <div className="ml-4 space-y-0">
+        <div className="space-y-0">
           {needsFollowUpCollapse && !showAllFollowUps && (
             <div className={`${followUpActionLinkClass} py-0.5 leading-none`}>
               <SectionAddLink compact prefix="..." onClick={() => setShowAllFollowUps(true)}>

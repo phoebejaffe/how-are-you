@@ -88,7 +88,7 @@ export function CollectionItemRow({
 
   if (editing) {
     return (
-      <div className={compact ? "py-0.5" : "py-2 pl-2"}>
+      <div className={compact ? "py-0.5" : "py-2"}>
         <InlineEditor
           compact={editCompact ?? compact}
           text={text}
