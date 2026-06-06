@@ -44,8 +44,8 @@ export function CollectionFolderSection({
     <div
       ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`mb-2 rounded-lg transition-shadow ${sortable.isDragging ? "opacity-40" : ""} ${
-        droppable.isOver ? "ring-2 ring-sage/60" : ""
+      className={`folder-card px-1 py-1 transition-shadow ${sortable.isDragging ? "opacity-40" : ""} ${
+        droppable.isOver ? "ring-2 ring-sage/50" : ""
       }`}
     >
       <FolderHeader
@@ -60,7 +60,7 @@ export function CollectionFolderSection({
         flush
       />
 
-      {!folder.collapsed && <div className="flex flex-col gap-y-2 pl-3">{children}</div>}
+      {!folder.collapsed && <div className="flex flex-col gap-y-1 px-2 pb-2">{children}</div>}
 
       <ConfirmDialog
         open={confirmDelete}

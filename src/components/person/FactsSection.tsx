@@ -79,15 +79,15 @@ export function FactsSection({
           <input
             value={factText}
             onChange={(e) => setFactText(e.target.value)}
-            placeholder="add a fact"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+            placeholder="Add a fact…"
+            className="input input-compact min-w-0 flex-1"
             autoFocus
           />
           {hasFolders && (
             <select
               value={targetFolderId}
               onChange={(e) => setTargetFolderId(e.target.value)}
-              className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
+              className="input input-compact w-auto text-ink-muted"
               aria-label="Folder"
             >
               <option value="">Unsorted</option>
@@ -98,7 +98,7 @@ export function FactsSection({
               ))}
             </select>
           )}
-          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+          <button type="submit" className="btn-primary btn-compact">
             Add
           </button>
           <button
@@ -108,9 +108,9 @@ export function FactsSection({
               onDone();
             }}
             aria-label="Cancel"
-            className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+            className="btn-ghost btn-compact min-w-11 px-3"
           >
-            X
+            ✕
           </button>
         </form>
       )}

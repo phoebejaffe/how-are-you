@@ -10,7 +10,7 @@ export function ChannelPicker({
   onChange: (channel: Channel) => void;
 }) {
   return (
-    <div className="flex shrink-0 gap-0.5" role="group" aria-label="Channel">
+    <div className="flex shrink-0 gap-1" role="group" aria-label="Channel">
       {CHANNEL_OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -19,10 +19,10 @@ export function ChannelPicker({
           title={CHANNEL_LABELS[opt.value]}
           aria-label={CHANNEL_LABELS[opt.value]}
           aria-pressed={value === opt.value}
-          className={`rounded px-2 py-1 text-sm transition ${
+          className={`rounded-lg px-2.5 py-2 text-sm transition-all ${
             value === opt.value
-              ? "bg-stone-200 grayscale-[30%] opacity-70"
-              : "grayscale opacity-40 hover:bg-stone-50 hover:opacity-55"
+              ? "bg-sage-light ring-1 ring-sage/30"
+              : "opacity-45 grayscale hover:bg-white/60 hover:opacity-70"
           }`}
         >
           <ChannelIcon channel={opt.value} />

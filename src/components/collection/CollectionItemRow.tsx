@@ -107,7 +107,6 @@ export function CollectionItemRow({
       text={text}
       timestampIso={timestampIso}
       channel={features.showChannel ? channel : undefined}
-      pinned={pinned}
       menuItems={menuItems}
       archived={archived}
       highlighted={highlighted}

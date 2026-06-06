@@ -25,7 +25,8 @@ export function ToastContainer() {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg ${typeClass(toast.type)}`}
+            className={`pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-2xl shadow-lg ${typeClass(toast.type)}`}
+            style={{ boxShadow: "var(--shadow-lift)" }}
             role="status"
           >
             <div className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-white">

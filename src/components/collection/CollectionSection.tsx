@@ -282,9 +282,9 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   );
 
   return (
-    <section className="mb-3">
-      <div className="-mx-2 mb-1 flex items-center gap-2 rounded bg-gray-200 px-2 py-0.5">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">{title}</h2>
+    <section className="mb-5">
+      <div className="section-header">
+        <h2 className="collection-section-title">{title}</h2>
         {!addingItem && (
           <SectionAddLink compact onClick={() => setAddingItem(true)}>
             {addLinkLabel}
@@ -311,7 +311,7 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
 
       {useFolders && features.folderCreate && onAddFolder && addingFolder && (
         <form
-          className="my-1 flex flex-wrap items-center gap-1 px-1"
+          className="card-padded mb-4 flex flex-wrap items-center gap-2.5"
           onSubmit={(e) => {
             e.preventDefault();
             const trimmed = folderName.trim();
@@ -325,10 +325,10 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
             placeholder="Folder name…"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+            className="input input-compact min-w-0 flex-1"
             autoFocus
           />
-          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+          <button type="submit" className="btn-primary btn-compact">
             Create
           </button>
           <button
@@ -338,15 +338,15 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
               setAddingFolder(false);
             }}
             aria-label="Cancel"
-            className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+            className="btn-ghost btn-compact min-w-11 px-3"
           >
-            X
+            ✕
           </button>
         </form>
       )}
 
       <div>
-        {!hasAnyItems && <p className="px-1 py-2 text-center text-xs text-stone-400">{emptyMessage}</p>}
+        {!hasAnyItems && <p className="empty-state text-xs">{emptyMessage}</p>}
         {listContent}
       </div>
     </section>

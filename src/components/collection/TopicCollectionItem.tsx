@@ -178,7 +178,7 @@ export function TopicCollectionItem({
           )}
           {!archived && addingFollowUp && (
             <form
-              className="flex flex-wrap items-center gap-1 py-2 pl-2"
+              className="flex flex-wrap items-center gap-2 py-2 pl-2"
               onSubmit={(e) => {
                 e.preventDefault();
                 const trimmed = followUpText.trim();
@@ -192,11 +192,11 @@ export function TopicCollectionItem({
                 value={followUpText}
                 onChange={(e) => setFollowUpText(e.target.value)}
                 placeholder="Follow-up…"
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+                className="input input-compact min-w-0 flex-1"
                 autoFocus
               />
               <ChannelPicker value={followUpChannel} onChange={setFollowUpChannel} />
-              <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+              <button type="submit" className="btn-primary btn-compact">
                 Add
               </button>
               <button
@@ -206,9 +206,9 @@ export function TopicCollectionItem({
                   setAddingFollowUp(false);
                 }}
                 aria-label="Cancel"
-                className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+                className="btn-ghost btn-compact min-w-11 px-3"
               >
-                X
+                ✕
               </button>
             </form>
           )}

@@ -42,8 +42,8 @@ export function PinnedFactsSection({
   if (facts.length === 0) return null;
 
   return (
-    <section className="mb-3 rounded-lg bg-amber-50/80 px-2 py-1 ring-1 ring-amber-200/60">
-      <h2 className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Pinned facts</h2>
+    <section className="pinned-strip">
+      <h2 className="section-label mb-2 text-amber-800/80">Pinned facts</h2>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           {facts.map((fact) => (

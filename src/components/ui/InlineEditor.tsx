@@ -22,7 +22,7 @@ export function InlineEditor({
 
   return (
     <form
-      className={`flex flex-wrap items-center gap-1 ${compact ? "" : "py-0.5"}`}
+      className={`flex flex-wrap items-center gap-2 ${compact ? "py-1" : "py-1.5"}`}
       onSubmit={(e) => {
         e.preventDefault();
         const trimmed = draft.trim();
@@ -33,25 +33,20 @@ export function InlineEditor({
       <input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        className={`min-w-0 flex-1 rounded border border-stone-300 px-2 text-stone-800 ${
-          compact ? "py-0.5 text-xs" : "py-1 text-sm"
-        }`}
+        className={`input min-w-0 flex-1 font-reading ${compact ? "input-compact" : ""}`}
         autoFocus
       />
       {showChannel && <ChannelPicker value={draftChannel} onChange={setDraftChannel} />}
-      <button
-        type="submit"
-        className={`rounded bg-sage text-white ${compact ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-xs"}`}
-      >
+      <button type="submit" className="btn-primary btn-compact">
         Save
       </button>
       <button
         type="button"
         onClick={onCancel}
         aria-label="Cancel"
-        className={`flex min-h-10 min-w-10 items-center justify-center rounded text-stone-500 active:bg-stone-100 ${compact ? "text-xs" : "text-xs"}`}
+        className="btn-ghost btn-compact min-w-11 px-3"
       >
-        X
+        ✕
       </button>
     </form>
   );

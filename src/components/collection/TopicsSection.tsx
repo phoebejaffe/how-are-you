@@ -183,7 +183,7 @@ export function TopicsSection({
         )
       }
       renderDragOverlay={(topic) => (
-        <div className="rounded-lg bg-white/95 px-3 py-2 text-sm shadow-md ring-1 ring-sage/40">{topic.text}</div>
+        <div className="rounded-lg bg-white/95 px-3 py-2 font-reading text-sm leading-relaxed shadow-md ring-1 ring-sage/40">{topic.text}</div>
       )}
     />
   );
@@ -214,7 +214,7 @@ function AddTopicForm({
 }) {
   return (
     <form
-      className="my-1 flex flex-wrap items-center gap-1 px-1"
+      className="my-2 flex flex-wrap items-center gap-2 px-1"
       onSubmit={(e) => {
         e.preventDefault();
         const trimmed = topicText.trim();
@@ -225,8 +225,8 @@ function AddTopicForm({
       <input
         value={topicText}
         onChange={(e) => onTextChange(e.target.value)}
-        placeholder="add a topic"
-        className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+        placeholder="Add a topic…"
+        className="input input-compact min-w-0 flex-1"
         autoFocus
       />
       <ChannelPicker value={topicChannel} onChange={onChannelChange} />
@@ -234,7 +234,7 @@ function AddTopicForm({
         <select
           value={targetFolderId}
           onChange={(e) => onFolderChange(e.target.value)}
-          className="rounded-lg border border-stone-300 bg-white/80 px-2 py-1.5 text-sm text-stone-600"
+          className="input input-compact w-auto text-ink-muted"
           aria-label="Folder"
         >
           <option value="">Unsorted</option>
@@ -245,16 +245,11 @@ function AddTopicForm({
           ))}
         </select>
       )}
-      <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+      <button type="submit" className="btn-primary btn-compact">
         Add
       </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label="Cancel"
-        className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
-      >
-        X
+      <button type="button" onClick={onCancel} aria-label="Cancel" className="btn-ghost btn-compact min-w-11 px-3">
+        ✕
       </button>
     </form>
   );

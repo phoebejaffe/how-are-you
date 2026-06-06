@@ -148,8 +148,8 @@ export function FriendsSection({
 
   return (
     <section>
-      <div className="mb-1 flex items-baseline gap-2 pr-2">
-        <h2 className="text-xs font-bold uppercase tracking-wide text-stone-600">Friends</h2>
+      <div className="section-header">
+        <h2 className="section-title">Friends</h2>
         {!addingFolder && (
           <IconButton className="ml-auto" onClick={() => setAddingFolder(true)} aria-label="New folder">
             <FolderPlusIcon />
@@ -159,7 +159,7 @@ export function FriendsSection({
 
       {addingFolder && (
         <form
-          className="my-1 flex flex-wrap items-center gap-1 px-1"
+          className="card-padded mb-4 flex flex-wrap items-center gap-2.5"
           onSubmit={(e) => {
             e.preventDefault();
             const trimmed = folderName.trim();
@@ -173,10 +173,10 @@ export function FriendsSection({
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
             placeholder="Folder name…"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+            className="input input-compact min-w-0 flex-1"
             autoFocus
           />
-          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
+          <button type="submit" className="btn-primary btn-compact">
             Create
           </button>
           <button
@@ -186,14 +186,14 @@ export function FriendsSection({
               setAddingFolder(false);
             }}
             aria-label="Cancel"
-            className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+            className="btn-ghost btn-compact min-w-11 px-3"
           >
-            X
+            ✕
           </button>
         </form>
       )}
 
-      {!hasAnyPeople && <p className="px-2 py-8 text-center text-sm text-stone-400">No friends yet — add someone above.</p>}
+      {!hasAnyPeople && <p className="empty-state">No friends yet — add someone above.</p>}
 
       <DndContext
         sensors={sensors}
@@ -233,8 +233,8 @@ export function FriendsSection({
 
         <DragOverlay dropAnimation={null}>
           {activePerson ? (
-            <div className="rounded-lg bg-white/95 px-3 py-2.5 shadow-md ring-1 ring-sage/40">
-              <span className="text-sm font-medium text-stone-800">{activePerson.displayName}</span>
+            <div className="card px-4 py-3">
+              <span className="text-[0.9375rem] font-medium text-ink">{activePerson.displayName}</span>
             </div>
           ) : null}
         </DragOverlay>

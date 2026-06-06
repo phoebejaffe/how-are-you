@@ -10,7 +10,6 @@ export function EntryRow({
   text,
   timestampIso,
   channel,
-  pinned = false,
   menuItems,
   archived = false,
   highlighted = false,
@@ -24,7 +23,6 @@ export function EntryRow({
   text: string;
   timestampIso: string;
   channel?: Channel;
-  pinned?: boolean;
   menuItems: RowMenuItem[];
   archived?: boolean;
   highlighted?: boolean;
@@ -56,36 +54,31 @@ export function EntryRow({
             }
           : undefined
       }
-      className={`flex items-start gap-2 rounded leading-snug transition-colors ${
-        compact ? "py-0.5 text-xs" : "py-1 text-sm"
+      className={`flex items-start gap-2.5 rounded-xl leading-snug transition-colors ${
+        compact ? "px-2 py-1.5 text-xs" : "px-2.5 py-2.5 text-[0.9375rem]"
       } ${
         highlighted
-          ? "bg-amber-100/90 ring-1 ring-amber-300/80"
+          ? "bg-amber-100/80 ring-1 ring-amber-300/60"
           : archived
-            ? "bg-stone-100/60 text-stone-500"
-            : "active:bg-white/70"
+            ? "bg-stone-100/50 text-ink-muted"
+            : "active:bg-white/60"
       } ${onRowClick ? "cursor-pointer" : ""}`}
     >
       {leading}
-      <div className="min-w-0 flex-1 break-words text-left">
-        {pinned && (
-          <span className="mr-1 text-amber-500" aria-label="Pinned">
-            📌
-          </span>
-        )}
+      <div className="min-w-0 flex-1 break-words text-left font-reading leading-relaxed">
         {text}
         {disclosureCollapsed && disclosureCount != null && (
-          <span className="ml-1.5 whitespace-nowrap text-xs tabular-nums text-stone-500">
+          <span className="ml-1.5 whitespace-nowrap text-xs tabular-nums text-ink-muted">
             ({disclosureCount})
           </span>
         )}
       </div>
-      <div className="flex shrink-0 items-start gap-1 self-start pt-px">
+      <div className="flex shrink-0 items-start gap-1 self-start pt-0.5">
         {onClusterSelect ? (
           <button
             type="button"
             data-time-cluster-trigger
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded border-0 bg-transparent p-0 text-xs leading-none text-stone-400 active:bg-white/50"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent p-1 text-xs leading-none text-ink-muted transition-colors active:bg-white/50"
             title={formatExactTime(timestampIso)}
             onClick={(e) => {
               e.stopPropagation();
@@ -96,14 +89,14 @@ export function EntryRow({
           </button>
         ) : (
           <span
-            className="inline-flex items-center gap-1.5 text-xs leading-none text-stone-400"
+            className="inline-flex items-center gap-1.5 p-1 text-xs leading-none text-ink-muted"
             title={formatExactTime(timestampIso)}
           >
             {meta}
           </span>
         )}
         <div
-          className="-mr-1 -mt-0.5"
+          className="-mr-1"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}

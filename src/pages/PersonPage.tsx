@@ -112,11 +112,11 @@ export function PersonPage() {
 
   if (!bundle) {
     return (
-      <div className="px-4 py-6 text-sm text-stone-500">
-        <Link to="/" className="text-terracotta hover:underline">
-          ← Back
+      <div className="page page-enter">
+        <Link to="/" className="back-link">
+          ← Friends
         </Link>
-        <p className="mt-4">Loading…</p>
+        <p className="mt-6 text-sm text-ink-muted">Loading…</p>
       </div>
     );
   }
@@ -137,21 +137,21 @@ export function PersonPage() {
   const topicFolders = bundle.topicFolders ?? [];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-4">
-      <Link to="/" className="text-sm text-terracotta hover:underline">
+    <div className="page page-enter">
+      <Link to="/" className="back-link">
         ← Friends
       </Link>
 
-      <header className="mt-3 mb-4">
+      <header className="mt-5 mb-6">
         {editingName ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2.5">
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-1.5 font-display text-xl"
+              className="input min-w-0 flex-1 font-display text-xl"
               autoFocus
             />
-            <button type="button" onClick={() => void saveName()} className="rounded-lg bg-sage px-3 text-sm text-white">
+            <button type="button" onClick={() => void saveName()} className="btn-primary btn-compact">
               Save
             </button>
             <button
@@ -161,95 +161,97 @@ export function PersonPage() {
                 setNameInput(bundle.person.displayName);
               }}
               aria-label="Cancel"
-              className="flex min-h-10 min-w-10 items-center justify-center rounded-lg text-sm text-stone-500 active:bg-stone-100"
+              className="btn-ghost btn-compact min-w-11 px-3"
             >
-              X
+              ✕
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-1">
-            <h1 className="min-w-0 flex-1 font-display text-2xl font-semibold text-stone-800">
+            <h1 className="min-w-0 flex-1 font-display text-[1.75rem] font-normal leading-tight text-ink sm:text-3xl">
               {bundle.person.displayName}
             </h1>
             <RowMenu items={[{ label: "Rename", onClick: () => setEditingName(true) }]} />
           </div>
         )}
-        {nameError && <p className="mt-1 text-sm text-terracotta-dark">{nameError}</p>}
+        {nameError && <p className="mt-2 text-sm text-terracotta-dark">{nameError}</p>}
       </header>
 
-      <PinnedFactsSection
-        facts={pinnedFacts}
-        folders={bundle.factFolders ?? []}
-        onPin={(factId) => void toggleFactPin(factId)}
-        onDelete={(factId) => void scheduleDeleteFact(factId)}
-        onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
-        onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
-        onReorderPinnedFacts={(draggedId, targetId) => void reorderPinnedFacts(nameKey, draggedId, targetId)}
-      />
+      <div className="space-y-5">
+        <PinnedFactsSection
+          facts={pinnedFacts}
+          folders={bundle.factFolders ?? []}
+          onPin={(factId) => void toggleFactPin(factId)}
+          onDelete={(factId) => void scheduleDeleteFact(factId)}
+          onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
+          onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
+          onReorderPinnedFacts={(draggedId, targetId) => void reorderPinnedFacts(nameKey, draggedId, targetId)}
+        />
 
-      <PinnedTopicsSection
-        topics={visibleTopics.pinned}
-        folders={topicFolders}
-        followUps={bundle.followUps}
-        pendingFollowUpDeletes={pendingFollowUpDeletes}
-        topicHighlighted={(id) => timeCluster.topicIds.has(id)}
-        followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
-        onClusterSelect={handleClusterSelect}
-        onPin={(id) => void toggleTopicPin(id)}
-        onArchive={(id) => void scheduleArchiveTopic(id)}
-        onDelete={(id) => void scheduleDeleteTopic(id)}
-        onEdit={(id, text, ch) => void updateTopic(id, text, ch)}
-        onAddFollowUp={(topicId, text, ch) => void addFollowUp(topicId, text, ch)}
-        onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
-        onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
-        onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
-        onReorderPinnedTopics={(draggedId, targetId) => void reorderPinnedTopics(nameKey, draggedId, targetId)}
-      />
+        <PinnedTopicsSection
+          topics={visibleTopics.pinned}
+          folders={topicFolders}
+          followUps={bundle.followUps}
+          pendingFollowUpDeletes={pendingFollowUpDeletes}
+          topicHighlighted={(id) => timeCluster.topicIds.has(id)}
+          followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+          onClusterSelect={handleClusterSelect}
+          onPin={(id) => void toggleTopicPin(id)}
+          onArchive={(id) => void scheduleArchiveTopic(id)}
+          onDelete={(id) => void scheduleDeleteTopic(id)}
+          onEdit={(id, text, ch) => void updateTopic(id, text, ch)}
+          onAddFollowUp={(topicId, text, ch) => void addFollowUp(topicId, text, ch)}
+          onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+          onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+          onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
+          onReorderPinnedTopics={(draggedId, targetId) => void reorderPinnedTopics(nameKey, draggedId, targetId)}
+        />
 
-      <TopicsSection
-        personKey={nameKey}
-        unpinnedTopics={visibleTopics.unpinned}
-        folders={topicFolders}
-        archivedTopics={visibleTopics.archived}
-        followUps={bundle.followUps}
-        pendingFollowUpDeletes={pendingFollowUpDeletes}
-        topicHighlighted={(id) => timeCluster.topicIds.has(id)}
-        followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
-        onClusterSelect={handleClusterSelect}
-        onAddTopic={(text, channel, folderId) => void addTopic(nameKey, text, channel, folderId)}
-        onPin={(id) => void toggleTopicPin(id)}
-        onArchive={(id) => void scheduleArchiveTopic(id)}
-        onUnarchive={(id) => void unarchiveTopic(id)}
-        onDelete={(id) => void scheduleDeleteTopic(id)}
-        onEdit={(id, text, ch) => void updateTopic(id, text, ch)}
-        onAddFollowUp={(topicId, text, ch) => void addFollowUp(topicId, text, ch)}
-        onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
-        onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
-        onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
-        onAddFolder={(name) => void addTopicFolder(nameKey, name)}
-        onRenameFolder={(folderId, name) => void renameTopicFolder(folderId, name)}
-        onDeleteFolder={(folderId) => void deleteTopicFolder(folderId)}
-        onToggleFolderCollapsed={(folderId) => void toggleTopicFolderCollapsed(folderId)}
-        onReorderLayout={(draggedId, targetId) => void reorderTopicsLayout(nameKey, draggedId, targetId)}
-        onReorderTopics={(draggedId, targetId) => void reorderTopics(nameKey, draggedId, targetId)}
-      />
+        <TopicsSection
+          personKey={nameKey}
+          unpinnedTopics={visibleTopics.unpinned}
+          folders={topicFolders}
+          archivedTopics={visibleTopics.archived}
+          followUps={bundle.followUps}
+          pendingFollowUpDeletes={pendingFollowUpDeletes}
+          topicHighlighted={(id) => timeCluster.topicIds.has(id)}
+          followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
+          onClusterSelect={handleClusterSelect}
+          onAddTopic={(text, channel, folderId) => void addTopic(nameKey, text, channel, folderId)}
+          onPin={(id) => void toggleTopicPin(id)}
+          onArchive={(id) => void scheduleArchiveTopic(id)}
+          onUnarchive={(id) => void unarchiveTopic(id)}
+          onDelete={(id) => void scheduleDeleteTopic(id)}
+          onEdit={(id, text, ch) => void updateTopic(id, text, ch)}
+          onAddFollowUp={(topicId, text, ch) => void addFollowUp(topicId, text, ch)}
+          onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
+          onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
+          onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
+          onAddFolder={(name) => void addTopicFolder(nameKey, name)}
+          onRenameFolder={(folderId, name) => void renameTopicFolder(folderId, name)}
+          onDeleteFolder={(folderId) => void deleteTopicFolder(folderId)}
+          onToggleFolderCollapsed={(folderId) => void toggleTopicFolderCollapsed(folderId)}
+          onReorderLayout={(draggedId, targetId) => void reorderTopicsLayout(nameKey, draggedId, targetId)}
+          onReorderTopics={(draggedId, targetId) => void reorderTopics(nameKey, draggedId, targetId)}
+        />
 
-      <FactsSection
-        personKey={nameKey}
-        folders={bundle.factFolders ?? []}
-        unpinnedFacts={unpinnedFacts}
-        onAddFact={(text, folderId) => void addFact(nameKey, text, "text", false, folderId)}
-        onPin={(factId) => void toggleFactPin(factId)}
-        onDeleteFact={(factId) => void scheduleDeleteFact(factId)}
-        onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
-        onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
-        onAddFolder={(name) => void addFactFolder(nameKey, name)}
-        onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
-        onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
-        onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
-        onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(nameKey, draggedId, targetId)}
-        onReorderFacts={(draggedId, targetId) => void reorderFacts(nameKey, draggedId, targetId)}
-      />
+        <FactsSection
+          personKey={nameKey}
+          folders={bundle.factFolders ?? []}
+          unpinnedFacts={unpinnedFacts}
+          onAddFact={(text, folderId) => void addFact(nameKey, text, "text", false, folderId)}
+          onPin={(factId) => void toggleFactPin(factId)}
+          onDeleteFact={(factId) => void scheduleDeleteFact(factId)}
+          onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
+          onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
+          onAddFolder={(name) => void addFactFolder(nameKey, name)}
+          onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
+          onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
+          onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
+          onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(nameKey, draggedId, targetId)}
+          onReorderFacts={(draggedId, targetId) => void reorderFacts(nameKey, draggedId, targetId)}
+        />
+      </div>
     </div>
   );
 }

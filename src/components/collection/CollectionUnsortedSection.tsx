@@ -35,9 +35,9 @@ export function CollectionUnsortedSection({
     <div
       ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`mb-2 rounded-lg bg-stone-100/80 py-1 transition-shadow ${
+      className={`folder-card-unsorted px-1 py-1 transition-shadow ${
         sortable.isDragging ? "opacity-40" : ""
-      } ${droppable.isOver ? "ring-2 ring-sage/60" : ""} ${itemCount === 0 ? "min-h-12" : ""}`}
+      } ${droppable.isOver ? "ring-2 ring-sage/50" : ""} ${itemCount === 0 ? "min-h-14" : ""}`}
     >
       <UnsortedFolderHeader
         label={label}
@@ -46,7 +46,7 @@ export function CollectionUnsortedSection({
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         flush
       />
-      <div className="flex flex-col gap-y-2 pl-3">{children}</div>
+      <div className="flex flex-col gap-y-1 px-2 pb-2">{children}</div>
     </div>
   );
 }

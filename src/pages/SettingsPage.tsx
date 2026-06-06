@@ -97,42 +97,43 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <Link to="/" className="text-sm text-terracotta hover:underline">
+    <div className="page page-enter">
+      <Link to="/" className="back-link">
         ← Friends
       </Link>
-      <h1 className="mt-3 font-display text-2xl font-semibold text-stone-800">Settings</h1>
+      <h1 className="mt-5 font-display text-[1.75rem] font-normal text-ink sm:text-3xl">Settings</h1>
 
-      <section className="mt-6">
-        <h2 className="text-sm font-semibold text-stone-700">Export</h2>
-        <p className="mt-1 text-xs text-stone-500">Select people to include in the export file.</p>
-        <ul className="mt-3 max-h-48 overflow-y-auto rounded-lg bg-white/50 ring-1 ring-stone-200/60">
+      <section className="card-padded mt-8">
+        <h2 className="section-title">Export</h2>
+        <p className="mt-1.5 text-sm text-ink-muted">Select people to include in the export file.</p>
+        <ul className="mt-4 max-h-52 overflow-y-auto rounded-xl bg-white/50 ring-1 ring-stone-200/60">
           {people.map((p) => (
-            <li key={p.nameKey} className="flex items-center gap-2 border-b border-stone-100 px-3 py-2 last:border-0">
+            <li key={p.nameKey} className="flex items-center gap-3 border-b border-stone-100 px-4 py-3 last:border-0">
               <input
                 type="checkbox"
                 checked={selected.has(p.nameKey)}
                 onChange={() => togglePerson(p.nameKey)}
                 id={`export-${p.nameKey}`}
+                className="size-4 rounded accent-sage"
               />
-              <label htmlFor={`export-${p.nameKey}`} className="text-sm">
+              <label htmlFor={`export-${p.nameKey}`} className="text-[0.9375rem]">
                 {p.displayName}
               </label>
             </li>
           ))}
         </ul>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-3 flex gap-4">
           <button
             type="button"
             onClick={() => setSelected(new Set(people.map((p) => p.nameKey)))}
-            className="text-xs text-stone-500 hover:underline"
+            className="text-sm text-ink-muted transition-colors hover:text-ink"
           >
             Select all
           </button>
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="text-xs text-stone-500 hover:underline"
+            className="text-sm text-ink-muted transition-colors hover:text-ink"
           >
             Clear
           </button>
@@ -141,22 +142,22 @@ export function SettingsPage() {
           type="button"
           disabled={selected.size === 0}
           onClick={() => void handleExport()}
-          className="mt-3 rounded-lg bg-sage px-4 py-2 text-sm font-medium text-white hover:bg-sage-dark disabled:opacity-40"
+          className="btn-primary mt-5 disabled:opacity-40"
         >
           Export selected
         </button>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-sm font-semibold text-stone-700">Import</h2>
-        <p className="mt-1 text-xs text-stone-500">
+      <section className="card-padded mt-5">
+        <h2 className="section-title">Import</h2>
+        <p className="mt-1.5 text-sm text-ink-muted">
           Import a JSON export file. Conflicts are resolved per person.
         </p>
         <input ref={fileRef} type="file" accept=".json,application/json" className="hidden" onChange={handleFileChange} />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="mt-3 rounded-lg bg-terracotta px-4 py-2 text-sm font-medium text-white hover:bg-terracotta-dark"
+          className="btn-secondary mt-5"
         >
           Choose file…
         </button>

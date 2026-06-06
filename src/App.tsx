@@ -16,7 +16,7 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-dvh items-center justify-center text-sm text-stone-500">
+      <div className="flex min-h-dvh items-center justify-center text-sm text-ink-muted">
         Loading…
       </div>
     );

@@ -17,12 +17,12 @@ export function SectionAddLink({
     <button
       type="button"
       onClick={onClick}
-      className={`items-center text-xs leading-none text-stone-400 active:text-stone-600 active:underline ${
-        compact ? "block w-fit py-0.5" : "inline-flex min-h-10 py-2"
+      className={`text-sm text-ink-muted transition-colors active:text-terracotta ${
+        compact ? "block w-fit py-1" : "inline-flex min-h-11 items-center py-2"
       }`}
     >
       {!hidePrefix && (
-        <span className="mr-0.5 text-stone-500" aria-hidden="true">
+        <span className="mr-0.5 font-medium text-sage" aria-hidden="true">
           {prefix}
         </span>
       )}

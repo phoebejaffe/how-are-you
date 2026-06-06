@@ -39,43 +39,41 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <header className="mb-6 flex items-start justify-between gap-4">
+    <div className="page page-enter">
+      <header className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-stone-800">How Are You</h1>
-          <p className="mt-1 text-sm text-stone-500">Remember what to ask your friends</p>
+          <h1 className="font-display text-[1.75rem] font-normal leading-tight text-ink sm:text-3xl">
+            How Are You
+          </h1>
+          <p className="mt-1.5 text-[0.9375rem] text-ink-muted">Remember what to ask your friends</p>
         </div>
-        <Link
-          to="/settings"
-          className="rounded-lg px-3 py-1.5 text-sm text-stone-600 ring-1 ring-stone-300 hover:bg-white/60"
-        >
+        <Link to="/settings" className="btn-ghost btn-compact mt-1">
           Settings
         </Link>
       </header>
 
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search friends…"
-        className="mb-3 w-full rounded-lg border border-stone-300 bg-white/80 px-3 py-2 text-sm"
-      />
-
-      <form onSubmit={handleAdd} className="mb-4 flex gap-2">
+      <div className="card-padded mb-6 space-y-4">
         <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="Add a friend…"
-          className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search friends…"
+          className="input"
         />
-        <button
-          type="submit"
-          className="rounded-lg bg-sage px-4 py-1.5 text-sm font-medium text-white hover:bg-sage-dark"
-        >
-          Add
-        </button>
-      </form>
-      {error && <p className="mb-3 text-sm text-terracotta-dark">{error}</p>}
+
+        <form onSubmit={handleAdd} className="flex gap-2.5">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Add a friend…"
+            className="input min-w-0 flex-1"
+          />
+          <button type="submit" className="btn-primary">
+            Add
+          </button>
+        </form>
+        {error && <p className="text-sm text-terracotta-dark">{error}</p>}
+      </div>
 
       <FriendsSection
         people={visible}

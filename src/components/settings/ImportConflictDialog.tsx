@@ -14,37 +14,25 @@ export function ImportConflictDialog({
   const name = conflict.imported.person.displayName;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/30 p-4">
-      <div className="w-full max-w-md rounded-xl bg-[#FFFCF8] p-5 shadow-xl ring-1 ring-stone-200">
-        <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-5 backdrop-blur-[2px]">
+      <div className="dialog-panel max-w-md">
+        <p className="section-label">
           Import conflict {index + 1} of {total}
         </p>
-        <h2 className="mt-1 font-display text-lg font-semibold text-stone-800">
+        <h2 className="mt-2 font-display text-xl font-normal text-ink">
           &ldquo;{name}&rdquo; already exists
         </h2>
-        <p className="mt-2 text-sm text-stone-600">
+        <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-ink-muted">
           Choose how to handle the imported data for this person.
         </p>
-        <div className="mt-5 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => onResolve("merge")}
-            className="rounded-lg bg-sage px-4 py-2 text-left text-sm font-medium text-white hover:bg-sage-dark"
-          >
+        <div className="mt-6 flex flex-col gap-2.5">
+          <button type="button" onClick={() => onResolve("merge")} className="btn-primary w-full justify-start">
             Merge — combine topics and facts
           </button>
-          <button
-            type="button"
-            onClick={() => onResolve("override")}
-            className="rounded-lg bg-terracotta px-4 py-2 text-left text-sm font-medium text-white hover:bg-terracotta-dark"
-          >
+          <button type="button" onClick={() => onResolve("override")} className="btn-secondary w-full justify-start">
             Override — replace existing data
           </button>
-          <button
-            type="button"
-            onClick={() => onResolve("ignore")}
-            className="rounded-lg px-4 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"
-          >
+          <button type="button" onClick={() => onResolve("ignore")} className="btn-ghost w-full justify-start">
             Ignore — keep existing, skip import
           </button>
         </div>

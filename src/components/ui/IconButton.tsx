@@ -9,8 +9,8 @@ export function IconButton({
   return (
     <button
       type="button"
-      className={`flex shrink-0 items-center justify-center rounded text-stone-500 active:bg-stone-100 active:text-stone-700 ${
-        compact ? "h-7 w-7" : "min-h-10 min-w-10"
+      className={`flex shrink-0 items-center justify-center rounded-xl text-ink-muted transition-colors active:bg-white/70 active:text-ink ${
+        compact ? "size-8" : "size-11"
       } ${className}`}
       {...props}
     >

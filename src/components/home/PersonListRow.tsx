@@ -26,12 +26,12 @@ export function PersonListRow({
     <>
       <Link
         to={`/person/${encodeURIComponent(person.nameKey)}`}
-        className="flex min-w-0 flex-1 items-baseline justify-between gap-3 px-3 py-2.5 text-sm active:bg-white/60"
+        className="flex min-w-0 flex-1 items-baseline justify-between gap-3 px-4 py-3.5 text-[0.9375rem] transition-colors active:bg-white/70"
         draggable={false}
       >
-        <span className="min-w-0 break-words font-medium text-stone-800">{person.displayName}</span>
+        <span className="min-w-0 break-words font-medium text-ink">{person.displayName}</span>
         {person.lastActivityAtIso && (
-          <span className="shrink-0 text-xs text-stone-400">
+          <span className="shrink-0 text-xs text-ink-muted">
             <RelativeTime iso={person.lastActivityAtIso} />
           </span>
         )}
