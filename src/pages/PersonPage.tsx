@@ -33,7 +33,6 @@ export function PersonPage() {
   const [topicText, setTopicText] = useState("");
   const [topicChannel, setTopicChannel] = useState<Channel>("call");
   const [factText, setFactText] = useState("");
-  const [factChannel, setFactChannel] = useState<Channel>("call");
   const [showArchived, setShowArchived] = useState(true);
 
   useEffect(() => {
@@ -90,7 +89,7 @@ export function PersonPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-4">
+    <div className="mx-auto max-w-4xl px-4 py-4">
       <Link to="/" className="text-sm text-terracotta hover:underline">
         ← Friends
       </Link>
@@ -146,7 +145,7 @@ export function PersonPage() {
       )}
 
       <form
-        className="mb-4 flex gap-1"
+        className="mb-4 flex flex-wrap items-center gap-1"
         onSubmit={(e) => {
           e.preventDefault();
           void addTopic(nameKey, topicText, topicChannel);
@@ -156,11 +155,11 @@ export function PersonPage() {
         <input
           value={topicText}
           onChange={(e) => setTopicText(e.target.value)}
-          placeholder="New topic to ask about…"
+          placeholder="Record a new topic"
           className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
         />
         <ChannelPicker value={topicChannel} onChange={setTopicChannel} />
-        <button type="submit" className="rounded-lg bg-terracotta px-3 text-sm text-white">
+        <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
           Add
         </button>
       </form>
@@ -206,7 +205,7 @@ export function PersonPage() {
           className="mb-2 flex gap-1 px-1"
           onSubmit={(e) => {
             e.preventDefault();
-            void addFact(nameKey, factText, factChannel);
+            void addFact(nameKey, factText, "text");
             setFactText("");
           }}
         >
@@ -214,10 +213,9 @@ export function PersonPage() {
             value={factText}
             onChange={(e) => setFactText(e.target.value)}
             placeholder="Add a fact…"
-            className="min-w-0 flex-1 rounded border border-stone-300 px-2 py-1 text-xs"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
           />
-          <ChannelPicker value={factChannel} onChange={setFactChannel} />
-          <button type="submit" className="rounded bg-sage px-2 text-xs text-white">
+          <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
             Add
           </button>
         </form>

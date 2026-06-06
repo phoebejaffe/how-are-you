@@ -1,10 +1,8 @@
 import { useMemo, useState } from "react";
-import { formatRelativeTime } from "../../lib/dates";
 import type { Channel, Fact } from "../../types";
-import { ChannelBadge } from "../ui/ChannelBadge";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
-import { RowMenu } from "../ui/RowMenu";
 
 export function FactRow({
   fact,
@@ -31,10 +29,11 @@ export function FactRow({
 
   if (editing) {
     return (
-      <div className="px-2 py-1">
+      <div className="py-2 pl-2">
         <InlineEditor
           text={fact.text}
           channel={fact.channel}
+          showChannel={false}
           onSave={(text, channel) => {
             onEdit(text, channel);
             setEditing(false);
@@ -47,15 +46,12 @@ export function FactRow({
 
   return (
     <>
-      <div className="flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm hover:bg-white/70">
-        <span className="min-w-0 flex-1 truncate" title={fact.text}>
-          {fact.pinned && <span className="mr-1 text-amber-500" aria-label="Pinned">📌</span>}
-          {fact.text}
-        </span>
-        <span className="shrink-0 text-[10px] text-stone-400">{formatRelativeTime(fact.recordedAtIso)}</span>
-        <ChannelBadge channel={fact.channel} />
-        <RowMenu items={menuItems} />
-      </div>
+      <EntryRow
+        text={fact.text}
+        timestampIso={fact.recordedAtIso}
+        pinned={fact.pinned}
+        menuItems={menuItems}
+      />
 
       <ConfirmDialog
         open={confirmDelete}

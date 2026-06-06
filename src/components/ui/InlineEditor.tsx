@@ -8,24 +8,26 @@ export function InlineEditor({
   onSave,
   onCancel,
   compact = false,
+  showChannel = true,
 }: {
   text: string;
   channel: Channel;
   onSave: (text: string, channel: Channel) => void;
   onCancel: () => void;
   compact?: boolean;
+  showChannel?: boolean;
 }) {
   const [draft, setDraft] = useState(text);
   const [draftChannel, setDraftChannel] = useState(channel);
 
   return (
     <form
-      className={`flex gap-1 ${compact ? "" : "py-0.5"}`}
+      className={`flex flex-wrap items-center gap-1 ${compact ? "" : "py-0.5"}`}
       onSubmit={(e) => {
         e.preventDefault();
         const trimmed = draft.trim();
         if (!trimmed) return;
-        onSave(trimmed, draftChannel);
+        onSave(trimmed, showChannel ? draftChannel : channel);
       }}
     >
       <input
@@ -36,7 +38,7 @@ export function InlineEditor({
         }`}
         autoFocus
       />
-      <ChannelPicker value={draftChannel} onChange={setDraftChannel} />
+      {showChannel && <ChannelPicker value={draftChannel} onChange={setDraftChannel} />}
       <button
         type="submit"
         className={`rounded bg-sage text-white ${compact ? "px-2 py-0.5 text-xs" : "px-2 py-1 text-xs"}`}

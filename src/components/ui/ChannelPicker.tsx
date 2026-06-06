@@ -1,5 +1,6 @@
-import { CHANNEL_ICONS, CHANNEL_OPTIONS } from "../../lib/channels";
+import { CHANNEL_LABELS, CHANNEL_OPTIONS } from "../../lib/channels";
 import type { Channel } from "../../types";
+import { ChannelIcon } from "./ChannelIcon";
 
 export function ChannelPicker({
   value,
@@ -9,17 +10,24 @@ export function ChannelPicker({
   onChange: (channel: Channel) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as Channel)}
-      className="rounded border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
-      aria-label="Channel"
-    >
+    <div className="flex shrink-0 gap-0.5" role="group" aria-label="Channel">
       {CHANNEL_OPTIONS.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {CHANNEL_ICONS[opt.value]} {opt.label}
-        </option>
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          title={CHANNEL_LABELS[opt.value]}
+          aria-label={CHANNEL_LABELS[opt.value]}
+          aria-pressed={value === opt.value}
+          className={`rounded px-2 py-1 text-sm transition ${
+            value === opt.value
+              ? "bg-stone-200 grayscale-[30%] opacity-70"
+              : "grayscale opacity-40 hover:bg-stone-50 hover:opacity-55"
+          }`}
+        >
+          <ChannelIcon channel={opt.value} />
+        </button>
       ))}
-    </select>
+    </div>
   );
 }

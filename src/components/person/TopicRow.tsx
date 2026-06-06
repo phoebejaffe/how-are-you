@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { formatRelativeTime } from "../../lib/dates";
 import type { Channel, FollowUp, Topic } from "../../types";
-import { ChannelBadge } from "../ui/ChannelBadge";
 import { ChannelPicker } from "../ui/ChannelPicker";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
-import { RowMenu } from "../ui/RowMenu";
+import type { RowMenuItem } from "../ui/RowMenu";
 
 export function TopicRow({
   topic,
@@ -28,17 +27,29 @@ export function TopicRow({
   onAddFollowUp: (text: string, channel: Channel) => void;
   onEditFollowUp: (followUpId: string, text: string, channel: Channel) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editingFollowUpId, setEditingFollowUpId] = useState<string | null>(null);
   const [followUpText, setFollowUpText] = useState("");
   const [followUpChannel, setFollowUpChannel] = useState<Channel>("call");
+  const [addingFollowUp, setAddingFollowUp] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showAllFollowUps, setShowAllFollowUps] = useState(false);
 
-  const topicFollowUps = followUps.filter((f) => f.topicId === topic.id);
+  const topicFollowUps = useMemo(
+    () =>
+      followUps
+        .filter((f) => f.topicId === topic.id)
+        .sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso)),
+    [followUps, topic.id],
+  );
+  const showFollowUps = topicFollowUps.length > 0 || !archived;
+  const needsFollowUpCollapse = topicFollowUps.length > 5;
+  const hiddenFollowUpCount = topicFollowUps.length - 4;
+  const displayedFollowUps =
+    needsFollowUpCollapse && !showAllFollowUps ? topicFollowUps.slice(-4) : topicFollowUps;
 
-  const menuItems = useMemo(() => {
-    const items = [
+  const topicMenuItems = useMemo((): RowMenuItem[] => {
+    return [
       { label: "Edit", onClick: () => setEditing(true) },
       ...(!archived
         ? [
@@ -48,12 +59,15 @@ export function TopicRow({
         : []),
       { label: "Delete", onClick: () => setConfirmDelete(true), destructive: true },
     ];
-    return items;
   }, [archived, onArchive, onPin, topic.pinned]);
+
+  function followUpMenuItems(followUpId: string): RowMenuItem[] {
+    return [{ label: "Edit", onClick: () => setEditingFollowUpId(followUpId) }];
+  }
 
   if (editing) {
     return (
-      <div className="px-2 py-1">
+      <div className="py-2 pl-2">
         <InlineEditor
           text={topic.text}
           channel={topic.channel}
@@ -69,30 +83,38 @@ export function TopicRow({
 
   return (
     <>
-      <div
-        className={`flex min-h-8 items-center gap-2 rounded px-2 py-1 text-sm ${
-          archived ? "bg-stone-100/60 text-stone-500" : "hover:bg-white/70"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="min-w-0 flex-1 truncate text-left"
-          title={topic.text}
-        >
-          {topic.pinned && <span className="mr-1 text-amber-500" aria-label="Pinned">📌</span>}
-          {topic.text}
-        </button>
-        <span className="shrink-0 text-[10px] text-stone-400">{formatRelativeTime(topic.createdAtIso)}</span>
-        <ChannelBadge channel={topic.channel} />
-        <RowMenu items={menuItems} />
-      </div>
+      <EntryRow
+        text={topic.text}
+        timestampIso={topic.createdAtIso}
+        channel={topic.channel}
+        pinned={topic.pinned}
+        menuItems={topicMenuItems}
+        archived={archived}
+      />
 
-      {expanded && (
+      {showFollowUps && (
         <div className={`ml-4 space-y-1 border-l-2 pl-3 ${archived ? "border-stone-200" : "border-sage/40"}`}>
-          {topicFollowUps.map((f) =>
+          {needsFollowUpCollapse && !showAllFollowUps && (
+            <button
+              type="button"
+              onClick={() => setShowAllFollowUps(true)}
+              className="py-0.5 text-xs text-terracotta hover:underline"
+            >
+              Show {hiddenFollowUpCount} more
+            </button>
+          )}
+          {needsFollowUpCollapse && showAllFollowUps && (
+            <button
+              type="button"
+              onClick={() => setShowAllFollowUps(false)}
+              className="py-0.5 text-xs text-stone-400 hover:underline"
+            >
+              Show less
+            </button>
+          )}
+          {displayedFollowUps.map((f) =>
             editingFollowUpId === f.id ? (
-              <div key={f.id} className="py-0.5">
+              <div key={f.id} className="py-2 pl-2">
                 <InlineEditor
                   compact
                   text={f.text}
@@ -105,34 +127,57 @@ export function TopicRow({
                 />
               </div>
             ) : (
-              <div key={f.id} className="flex min-h-7 items-center gap-2 text-xs text-stone-600">
-                <span className="min-w-0 flex-1 truncate" title={f.text}>
-                  ↳ {f.text}
-                </span>
-                <span className="shrink-0 text-[10px] text-stone-400">{formatRelativeTime(f.recordedAtIso)}</span>
-                <ChannelBadge channel={f.channel} />
-                <RowMenu items={[{ label: "Edit", onClick: () => setEditingFollowUpId(f.id) }]} />
-              </div>
+              <EntryRow
+                key={f.id}
+                text={f.text}
+                timestampIso={f.recordedAtIso}
+                channel={f.channel}
+                menuItems={followUpMenuItems(f.id)}
+                archived={archived}
+              />
             ),
           )}
-          {!archived && (
+          {!archived && !addingFollowUp && (
+            <button
+              type="button"
+              onClick={() => setAddingFollowUp(true)}
+              className="py-0.5 text-xs text-stone-400 hover:text-stone-600 hover:underline"
+            >
+              Add followup
+            </button>
+          )}
+          {!archived && addingFollowUp && (
             <form
-              className="flex gap-1 pt-1"
+              className="flex flex-wrap items-center gap-1 py-2 pl-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                onAddFollowUp(followUpText, followUpChannel);
+                const trimmed = followUpText.trim();
+                if (!trimmed) return;
+                onAddFollowUp(trimmed, followUpChannel);
                 setFollowUpText("");
+                setAddingFollowUp(false);
               }}
             >
               <input
                 value={followUpText}
                 onChange={(e) => setFollowUpText(e.target.value)}
-                placeholder="Add follow-up…"
-                className="min-w-0 flex-1 rounded border border-stone-300 px-2 py-0.5 text-xs"
+                placeholder="Follow-up…"
+                className="min-w-0 flex-1 rounded-lg border border-stone-300 bg-white/80 px-3 py-1.5 text-sm"
+                autoFocus
               />
               <ChannelPicker value={followUpChannel} onChange={setFollowUpChannel} />
-              <button type="submit" className="rounded bg-sage px-2 py-0.5 text-xs text-white">
+              <button type="submit" className="rounded-lg bg-sage px-3 py-1.5 text-sm text-white hover:bg-sage-dark">
                 Add
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFollowUpText("");
+                  setAddingFollowUp(false);
+                }}
+                className="rounded-lg px-2 py-1.5 text-xs text-stone-500 hover:bg-stone-100"
+              >
+                Cancel
               </button>
             </form>
           )}

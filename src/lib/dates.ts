@@ -1,18 +1,41 @@
-const relativeFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"] as const;
+const ONE_HOUR_MS = 3_600_000;
+
+function startOfLocalDay(date: Date): number {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function formatMdYy(date: Date): string {
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const y = date.getFullYear() % 100;
+  return `${m}/${d}/${y.toString().padStart(2, "0")}`;
+}
+
+export function formatExactTime(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
 
 export function formatRelativeTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  const diffSec = Math.round((then - now) / 1000);
-  const absSec = Math.abs(diffSec);
+  const then = new Date(iso);
+  const now = new Date();
+  const elapsedMs = now.getTime() - then.getTime();
 
-  if (absSec < 60) return "just now";
-  if (absSec < 3600) return relativeFormatter.format(Math.round(diffSec / 60), "minute");
-  if (absSec < 86400) return relativeFormatter.format(Math.round(diffSec / 3600), "hour");
-  if (absSec < 604800) return relativeFormatter.format(Math.round(diffSec / 86400), "day");
-  if (absSec < 2629800) return relativeFormatter.format(Math.round(diffSec / 604800), "week");
-  if (absSec < 31557600) return relativeFormatter.format(Math.round(diffSec / 2629800), "month");
-  return relativeFormatter.format(Math.round(diffSec / 31557600), "year");
+  if (elapsedMs >= 0 && elapsedMs < ONE_HOUR_MS) return "now";
+
+  const dayDiff = Math.round((startOfLocalDay(now) - startOfLocalDay(then)) / 86_400_000);
+
+  if (dayDiff === 0) return "today";
+  if (dayDiff === 1) return "yesterday";
+  if (dayDiff > 1 && dayDiff < 7) return WEEKDAY_SHORT[then.getDay()];
+
+  return formatMdYy(then);
 }
 
 export function formatShortDateTime(iso: string): string {

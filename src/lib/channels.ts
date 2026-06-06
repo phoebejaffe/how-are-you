@@ -7,13 +7,15 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 };
 
 export const CHANNEL_ICONS: Record<Channel, string> = {
-  call: "📱",
+  call: "📞",
   text: "💬",
   in_person: "👤",
 };
 
-export const CHANNEL_OPTIONS: { value: Channel; label: string }[] = [
-  { value: "call", label: "Call" },
-  { value: "text", label: "Text" },
-  { value: "in_person", label: "In person" },
-];
+/** Display order for the channel button group (call in the middle). */
+export const CHANNEL_ORDER: Channel[] = ["text", "call", "in_person"];
+
+export const CHANNEL_OPTIONS = CHANNEL_ORDER.map((value) => ({
+  value,
+  label: CHANNEL_LABELS[value],
+}));

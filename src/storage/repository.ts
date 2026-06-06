@@ -23,7 +23,7 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
     followUps.push(...topicFollowUps);
   }
 
-  followUps.sort((a, b) => b.recordedAtIso.localeCompare(a.recordedAtIso));
+  followUps.sort((a, b) => a.recordedAtIso.localeCompare(b.recordedAtIso));
 
   return { person, topics, followUps, facts };
 }
