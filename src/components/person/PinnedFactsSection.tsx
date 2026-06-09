@@ -1,8 +1,5 @@
-import {
-  DndContext,
-  closestCenter,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { AppDndContext } from "../dnd/AppDndContext";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useMemo } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
@@ -44,7 +41,7 @@ export function PinnedFactsSection({
   return (
     <section className="pinned-strip">
       <h2 className="section-label mb-2 text-amber-800/80">Pinned facts</h2>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <AppDndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           {facts.map((fact) => (
             <SortableFactItem
@@ -58,7 +55,7 @@ export function PinnedFactsSection({
             />
           ))}
         </SortableContext>
-      </DndContext>
+      </AppDndContext>
     </section>
   );
 }

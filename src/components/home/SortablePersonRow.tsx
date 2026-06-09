@@ -7,12 +7,15 @@ import { PersonListRow } from "./PersonListRow";
 export function SortablePersonRow({
   person,
   onDelete,
+  sortable = true,
 }: {
   person: Person;
   onDelete?: () => void;
+  sortable?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: personDragId(person.nameKey),
+    disabled: !sortable,
   });
 
   const style = {
@@ -20,12 +23,16 @@ export function SortablePersonRow({
     transition,
   };
 
+  if (!sortable) {
+    return <PersonListRow person={person} onDelete={onDelete} />;
+  }
+
   return (
     <div ref={setNodeRef} style={style} className={isDragging ? "z-10 opacity-40" : ""}>
       <PersonListRow
         person={person}
         onDelete={onDelete}
-        sortableHandleProps={{ ...attributes, ...listeners }}
+        dragProps={{ ...attributes, ...listeners }}
       />
     </div>
   );

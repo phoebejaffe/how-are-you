@@ -1,10 +1,5 @@
-import {
-  DndContext,
-  DragOverlay,
-  closestCenter,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
+import { DragOverlay, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { AppDndContext } from "../dnd/AppDndContext";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PeopleFolder, Person } from "../../types";
@@ -16,6 +11,7 @@ import {
   isFolderSortId,
   isPersonDragId,
 } from "../dnd/dndIds";
+import { personCollisionDetection } from "../dnd/personCollisionDetection";
 import { useAppDndSensors } from "../dnd/dndSensors";
 import {
   groupPeople,
@@ -32,9 +28,10 @@ import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
 export function FriendsSection({
   people,
   folders,
+  sortable = true,
   onDeletePerson,
   onMovePersonToFolder,
-  onReorderPeople,
+  onDropPersonOnPerson,
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -43,9 +40,10 @@ export function FriendsSection({
 }: {
   people: Person[];
   folders: PeopleFolder[];
+  sortable?: boolean;
   onDeletePerson: (nameKey: string) => void;
   onMovePersonToFolder: (nameKey: string, folderId: string | null) => void;
-  onReorderPeople: (draggedKey: string, targetKey: string) => void;
+  onDropPersonOnPerson: (draggedKey: string, targetKey: string) => void;
   onAddFolder: (name: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -79,13 +77,14 @@ export function FriendsSection({
   const wasUnsortedVisibleRef = useRef(unsortedVisible);
 
   useEffect(() => {
+    if (!sortable) return;
     if (unsortedVisible && !wasUnsortedVisibleRef.current) {
       const next = moveUnsortedToEnd(resolvePeopleLayoutOrder(folders));
       savePeopleLayoutOrder(next);
       setLayoutVersion((v) => v + 1);
     }
     wasUnsortedVisibleRef.current = unsortedVisible;
-  }, [unsortedVisible, folders]);
+  }, [unsortedVisible, folders, sortable]);
 
   const activePerson = activePersonKey ? people.find((p) => p.nameKey === activePersonKey) : null;
 
@@ -105,17 +104,7 @@ export function FriendsSection({
     const overId = String(over.id);
 
     if (isPersonDragId(activeId) && isPersonDragId(overId) && activeId !== overId) {
-      const draggedKey = activeId.slice("person:".length);
-      const targetKey = overId.slice("person:".length);
-      const draggedPerson = people.find((p) => p.nameKey === draggedKey);
-      const targetPerson = people.find((p) => p.nameKey === targetKey);
-      if (
-        draggedPerson &&
-        targetPerson &&
-        (draggedPerson.folderId ?? null) === (targetPerson.folderId ?? null)
-      ) {
-        onReorderPeople(draggedKey, targetKey);
-      }
+      onDropPersonOnPerson(activeId.slice("person:".length), overId.slice("person:".length));
       return;
     }
 
@@ -145,6 +134,36 @@ export function FriendsSection({
       setLayoutVersion((v) => v + 1);
     }
   }
+
+  const folderList = layoutOrder.map((itemId) => {
+    if (itemId === UNSORTED_DROP_ID) {
+      if (!unsortedVisible) return null;
+      return (
+        <UnsortedPeopleSection
+          key={itemId}
+          people={grouped.unsorted}
+          sortable={sortable}
+          onDeletePerson={onDeletePerson}
+        />
+      );
+    }
+
+    const folder = folderMap.get(itemId);
+    if (!folder) return null;
+
+    return (
+      <PeopleFolderSection
+        key={itemId}
+        folder={folder}
+        people={folderPeopleMap.get(itemId) ?? []}
+        sortable={sortable}
+        onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
+        onRename={(name) => onRenameFolder(folder.id, name)}
+        onDelete={() => onDeleteFolder(folder.id)}
+        onDeletePerson={onDeletePerson}
+      />
+    );
+  });
 
   return (
     <section>
@@ -195,50 +214,28 @@ export function FriendsSection({
 
       {!hasAnyPeople && <p className="empty-state">No friends yet — add someone above.</p>}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          {layoutOrder.map((itemId) => {
-            if (itemId === UNSORTED_DROP_ID) {
-              if (!unsortedVisible) return null;
-              return (
-                <UnsortedPeopleSection
-                  key={itemId}
-                  people={grouped.unsorted}
-                  onDeletePerson={onDeletePerson}
-                />
-              );
-            }
+      {sortable ? (
+        <AppDndContext
+          sensors={sensors}
+          collisionDetection={personCollisionDetection}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            {folderList}
+          </SortableContext>
 
-            const folder = folderMap.get(itemId);
-            if (!folder) return null;
-
-            return (
-              <PeopleFolderSection
-                key={itemId}
-                folder={folder}
-                people={folderPeopleMap.get(itemId) ?? []}
-                onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
-                onRename={(name) => onRenameFolder(folder.id, name)}
-                onDelete={() => onDeleteFolder(folder.id)}
-                onDeletePerson={onDeletePerson}
-              />
-            );
-          })}
-        </SortableContext>
-
-        <DragOverlay dropAnimation={null}>
-          {activePerson ? (
-            <div className="card px-4 py-3">
-              <span className="text-[0.9375rem] font-medium text-ink">{activePerson.displayName}</span>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activePerson ? (
+              <div className="card px-4 py-3">
+                <span className="text-[0.9375rem] font-medium text-ink">{activePerson.displayName}</span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </AppDndContext>
+      ) : (
+        folderList
+      )}
     </section>
   );
 }

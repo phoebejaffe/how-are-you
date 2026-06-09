@@ -1,4 +1,5 @@
 import { useState, type HTMLAttributes } from "react";
+import { DRAG_SURFACE_ATTR } from "../dnd/dragClickGuard";
 import { CheckIcon } from "../ui/CheckIcon";
 import { RowMenu, type RowMenuItem } from "../ui/RowMenu";
 
@@ -82,6 +83,7 @@ export function FolderHeader({
             type="button"
             onClick={onToggleCollapsed}
             className={`flex min-h-11 min-w-0 flex-1 cursor-pointer touch-none select-none items-center gap-2 rounded-xl text-left text-sm font-semibold text-ink transition-colors active:bg-white/50 ${flush ? "px-1" : "px-1"}`}
+            {...{ [DRAG_SURFACE_ATTR]: sortableHandleProps ? "" : undefined }}
             {...sortableHandleProps}
           >
             <span className="flex min-w-0 flex-1 items-baseline">
@@ -120,6 +122,7 @@ export function UnsortedFolderHeader({
     >
       <div
         className={`flex min-h-11 min-w-0 flex-1 touch-none select-none items-center gap-2 text-sm font-semibold text-ink-muted`}
+        {...{ [DRAG_SURFACE_ATTR]: sortableHandleProps ? "" : undefined }}
         {...sortableHandleProps}
       >
         <span className="min-w-0 truncate">{label}</span>

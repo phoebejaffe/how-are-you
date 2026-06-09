@@ -43,6 +43,7 @@ import type {
   PeopleFolder,
   Person,
   PersonBundle,
+  PersonLocation,
   Topic,
   TopicFolder,
 } from "../types";
@@ -99,6 +100,8 @@ interface AppState {
   togglePeopleFolderCollapsed: (folderId: string) => Promise<void>;
   movePersonToFolder: (nameKey: string, folderId: string | null) => Promise<void>;
   reorderPeople: (draggedKey: string, targetKey: string) => Promise<void>;
+  dropPersonOnPerson: (draggedKey: string, targetKey: string) => Promise<void>;
+  updatePersonLocations: (nameKey: string, locations: PersonLocation[]) => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
@@ -899,6 +902,45 @@ export const useAppStore = create<AppState>((set, get) => ({
         const updated = toSave.find((p) => p.nameKey === person.nameKey);
         return updated ?? person;
       }),
+    });
+  },
+
+  async dropPersonOnPerson(draggedKey, targetKey) {
+    const people = get().people;
+    const dragged = people.find((p) => p.nameKey === draggedKey);
+    const target = people.find((p) => p.nameKey === targetKey);
+    if (!dragged || !target) return;
+
+    const draggedFolder = dragged.folderId ?? null;
+    const targetFolder = target.folderId ?? null;
+
+    if (draggedFolder !== targetFolder) {
+      await get().movePersonToFolder(draggedKey, targetFolder);
+    }
+
+    await get().reorderPeople(draggedKey, targetKey);
+  },
+
+  async updatePersonLocations(nameKey, locations) {
+    const person = get().people.find((p) => p.nameKey === nameKey);
+    if (!person) return;
+
+    const { metLocation: _met, workLocation: _work, ...rest } = person;
+    const next: Person = {
+      ...rest,
+      updatedAtIso: nowIso(),
+      locations: locations.length > 0 ? locations : undefined,
+    };
+
+    await repo.savePerson(next);
+    set({
+      people: get().people.map((p) => (p.nameKey === nameKey ? next : p)),
+      bundles: {
+        ...get().bundles,
+        [nameKey]: get().bundles[nameKey]
+          ? { ...get().bundles[nameKey], person: next }
+          : get().bundles[nameKey],
+      },
     });
   },
 

@@ -4,6 +4,14 @@ export type TopicStatus = "active" | "archived";
 
 export type ActivityType = "topic" | "follow_up" | "fact";
 
+export interface PersonLocation {
+  id: string;
+  label: string;
+  name: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Person {
   nameKey: string;
   displayName: string;
@@ -11,6 +19,11 @@ export interface Person {
   updatedAtIso: string;
   folderId?: string;
   sortOrder?: number;
+  /** @deprecated Migrated to `locations` on read. */
+  metLocation?: string;
+  /** @deprecated Migrated to `locations` on read. */
+  workLocation?: string;
+  locations?: PersonLocation[];
   lastActivityAtIso?: string;
   lastActivityType?: ActivityType;
 }

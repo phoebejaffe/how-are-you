@@ -6,7 +6,6 @@ import type { PeopleFolder, Person } from "../../types";
 import { sortPeopleInFolder } from "../../lib/personOrder";
 import { folderDropId, folderSortId, personDragId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
 import { FolderHeader } from "../folders/FolderHeader";
-import { mergeRefs } from "../dnd/mergeRefs";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { SortablePersonRow } from "./SortablePersonRow";
 
@@ -17,6 +16,7 @@ export function PeopleFolderSection({
   onRename,
   onDelete,
   onDeletePerson,
+  sortable = true,
 }: {
   folder: PeopleFolder;
   people: Person[];
@@ -24,59 +24,70 @@ export function PeopleFolderSection({
   onRename: (name: string) => void;
   onDelete: () => void;
   onDeletePerson: (nameKey: string) => void;
+  sortable?: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const sortedPeople = sortPeopleInFolder(people, folder.id);
   const sortableIds = sortedPeople.map((person) => personDragId(person.nameKey));
 
-  const sortable = useSortable({
+  const folderSortable = useSortable({
     id: folderSortId(folder.id),
     data: { type: "folder-sort", folderId: folder.id } satisfies FolderSortData,
+    disabled: !sortable,
   });
 
   const droppable = useDroppable({
     id: folderDropId(folder.id),
     data: { type: "folder-drop", folderId: folder.id } satisfies FolderDropData,
+    disabled: !sortable,
   });
 
   const style = {
-    transform: CSS.Transform.toString(sortable.transform),
-    transition: sortable.transition,
+    transform: CSS.Transform.toString(folderSortable.transform),
+    transition: folderSortable.transition,
   };
 
   return (
     <div
-      ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
+      ref={folderSortable.setNodeRef}
       style={style}
-      className={`folder-card transition-shadow ${
-        sortable.isDragging ? "opacity-40" : ""
-      } ${droppable.isOver ? "ring-2 ring-sage/50" : ""}`}
+      className={`folder-card transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""}`}
     >
-      <FolderHeader
-        name={folder.name}
-        count={people.length}
-        collapsed={folder.collapsed}
-        isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
-        onToggleCollapsed={onToggleCollapsed}
-        onRename={onRename}
-        onDeleteRequest={() => setConfirmDelete(true)}
-        sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
-      />
+      <div
+        ref={droppable.setNodeRef}
+        className={`rounded-2xl transition-shadow ${droppable.isOver ? "ring-2 ring-sage/50" : ""} ${
+          folder.collapsed && people.length === 0 ? "min-h-14" : ""
+        }`}
+      >
+        <FolderHeader
+          name={folder.name}
+          count={people.length}
+          collapsed={folder.collapsed}
+          isFolderReorderTarget={folderSortable.isOver && !folderSortable.isDragging}
+          onToggleCollapsed={onToggleCollapsed}
+          onRename={onRename}
+          onDeleteRequest={() => setConfirmDelete(true)}
+          sortableHandleProps={
+            sortable ? { ...folderSortable.attributes, ...folderSortable.listeners } : undefined
+          }
+        />
 
-      {!folder.collapsed && (
-        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          <ul className="list-divider px-1 pb-1">
-            {sortedPeople.map((person) => (
-              <li key={person.nameKey}>
-                <SortablePersonRow
-                  person={person}
-                  onDelete={() => onDeletePerson(person.nameKey)}
-                />
-              </li>
-            ))}
-          </ul>
-        </SortableContext>
-      )}
+        {!folder.collapsed && (
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <ul className="list-divider px-1 pb-1">
+              {sortedPeople.map((person) => (
+                <li key={person.nameKey}>
+                  <SortablePersonRow
+                    person={person}
+                    sortable={sortable}
+                    onDelete={() => onDeletePerson(person.nameKey)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </SortableContext>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmDelete}

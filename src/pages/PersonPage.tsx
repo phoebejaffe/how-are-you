@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { PinnedTopicsSection } from "../components/collection/PinnedTopicsSection";
 import { TopicsSection } from "../components/collection/TopicsSection";
 import { FactsSection } from "../components/person/FactsSection";
+import { PersonLocationsSection } from "../components/person/PersonLocationsSection";
 import { PinnedFactsSection } from "../components/person/PinnedFactsSection";
 import { CheckIcon } from "../components/ui/CheckIcon";
 import { RowMenu } from "../components/ui/RowMenu";
@@ -21,6 +22,7 @@ export function PersonPage() {
   const pendingFollowUpDeletes = useAppStore((s) => s.pendingFollowUpDeletes);
   const loadBundle = useAppStore((s) => s.loadBundle);
   const renamePerson = useAppStore((s) => s.renamePerson);
+  const updatePersonLocations = useAppStore((s) => s.updatePersonLocations);
   const addTopic = useAppStore((s) => s.addTopic);
   const addFact = useAppStore((s) => s.addFact);
   const scheduleArchiveTopic = useAppStore((s) => s.scheduleArchiveTopic);
@@ -177,6 +179,11 @@ export function PersonPage() {
         )}
         {nameError && <p className="mt-2 text-sm text-terracotta-dark">{nameError}</p>}
       </header>
+
+      <PersonLocationsSection
+        person={bundle.person}
+        onSave={(locations) => void updatePersonLocations(nameKey, locations)}
+      />
 
       <div className="space-y-5">
         <PinnedFactsSection

@@ -1,4 +1,5 @@
 import { createId } from "../lib/ids";
+import { mergePersonLocations, normalizePersonLocations } from "../lib/personLocations";
 import type {
   ExportPayload,
   ImportConflict,
@@ -117,11 +118,16 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
   const remappedImportedTopics = remapFolderedItems(importedTopics, usedIds, topicFolderIdMap);
 
   return {
-    person: {
-      ...existing.person,
-      displayName: existing.person.displayName,
-      updatedAtIso: new Date().toISOString(),
-    },
+    person: (() => {
+      const existingPerson = normalizePersonLocations(existing.person);
+      const importedPerson = normalizePersonLocations(imported.person);
+      return {
+        ...existingPerson,
+        displayName: existing.person.displayName,
+        locations: mergePersonLocations(existingPerson.locations, importedPerson.locations),
+        updatedAtIso: new Date().toISOString(),
+      };
+    })(),
     topics: [...existing.topics, ...remappedImportedTopics],
     followUps: [...existing.followUps, ...importedFollowUps],
     facts: [...existing.facts, ...importedFacts],

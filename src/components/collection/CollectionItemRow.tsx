@@ -2,6 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useMemo, useState, type HTMLAttributes } from "react";
 import type { Channel } from "../../types";
+import { DRAG_SURFACE_ATTR } from "../dnd/dragClickGuard";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
@@ -121,7 +122,7 @@ export function CollectionItemRow({
   if (sortableHandleProps) {
     return (
       <>
-        <div className="touch-none select-none" {...sortableHandleProps}>
+        <div className="touch-none select-none" {...{ [DRAG_SURFACE_ATTR]: "" }} {...sortableHandleProps}>
           {row}
         </div>
         <ConfirmDialog
@@ -162,6 +163,7 @@ export function CollectionItemRow({
         ref={setNodeRef}
         style={style}
         className={`touch-none select-none ${isDragging ? "z-10 opacity-40" : ""}`}
+        {...{ [DRAG_SURFACE_ATTR]: "" }}
         {...listeners}
         {...attributes}
       >

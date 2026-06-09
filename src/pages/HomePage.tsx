@@ -15,17 +15,25 @@ export function HomePage() {
   const deletePeopleFolder = useAppStore((s) => s.deletePeopleFolder);
   const togglePeopleFolderCollapsed = useAppStore((s) => s.togglePeopleFolderCollapsed);
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
-  const reorderPeople = useAppStore((s) => s.reorderPeople);
+  const dropPersonOnPerson = useAppStore((s) => s.dropPersonOnPerson);
   const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
+  const allPeople = useMemo(
+    () => people.filter((p) => !pendingDeletes.has(p.nameKey)),
+    [people, pendingDeletes],
+  );
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return people.filter((p) => !pendingDeletes.has(p.nameKey)).filter((p) => !q || p.displayName.toLowerCase().includes(q));
-  }, [people, pendingDeletes, query]);
+    if (!q) return allPeople;
+    return allPeople.filter((p) => p.displayName.toLowerCase().includes(q));
+  }, [allPeople, query]);
+
+  const searching = query.trim().length > 0;
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -76,11 +84,12 @@ export function HomePage() {
       </div>
 
       <FriendsSection
-        people={visible}
+        people={searching ? visible : allPeople}
         folders={peopleFolders}
+        sortable={!searching}
         onDeletePerson={setDeleteTarget}
         onMovePersonToFolder={(nameKey, folderId) => void movePersonToFolder(nameKey, folderId)}
-        onReorderPeople={(draggedKey, targetKey) => void reorderPeople(draggedKey, targetKey)}
+        onDropPersonOnPerson={(draggedKey, targetKey) => void dropPersonOnPerson(draggedKey, targetKey)}
         onAddFolder={(name) => void addPeopleFolder(name)}
         onRenameFolder={(folderId, name) => void renamePeopleFolder(folderId, name)}
         onDeleteFolder={(folderId) => void deletePeopleFolder(folderId)}
