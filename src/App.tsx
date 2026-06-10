@@ -5,14 +5,20 @@ import { HomePage } from "./pages/HomePage";
 import { PersonPage } from "./pages/PersonPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { useAppStore } from "./store/appStore";
+import { useUserLocationStore } from "./store/userLocationStore";
 
 export default function App() {
   const hydrate = useAppStore((s) => s.hydrate);
   const ready = useAppStore((s) => s.ready);
+  const requestLocation = useUserLocationStore((s) => s.requestLocation);
 
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (ready) requestLocation();
+  }, [ready, requestLocation]);
 
   if (!ready) {
     return (

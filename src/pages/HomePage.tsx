@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FriendsSection } from "../components/home/FriendsSection";
+import { NearbyPeopleSection } from "../components/home/NearbyPeopleSection";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useAppStore } from "../store/appStore";
+import { useUserLocationStore } from "../store/userLocationStore";
 
 export function HomePage() {
   const people = useAppStore((s) => s.people);
@@ -17,6 +19,9 @@ export function HomePage() {
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
   const dropPersonOnPerson = useAppStore((s) => s.dropPersonOnPerson);
   const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
+  const locationStatus = useUserLocationStore((s) => s.status);
+  const userLatitude = useUserLocationStore((s) => s.latitude);
+  const userLongitude = useUserLocationStore((s) => s.longitude);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
@@ -82,6 +87,10 @@ export function HomePage() {
         </form>
         {error && <p className="text-sm text-terracotta-dark">{error}</p>}
       </div>
+
+      {locationStatus === "granted" && userLatitude != null && userLongitude != null && (
+        <NearbyPeopleSection people={allPeople} latitude={userLatitude} longitude={userLongitude} />
+      )}
 
       <FriendsSection
         people={searching ? visible : allPeople}

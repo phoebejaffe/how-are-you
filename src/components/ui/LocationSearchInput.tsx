@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { searchPlaces, type PlaceResult } from "../../lib/geocoding";
+import { useUserLocationStore } from "../../store/userLocationStore";
 
 export function LocationSearchInput({
   value,
@@ -18,6 +19,8 @@ export function LocationSearchInput({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [results, setResults] = useState<PlaceResult[]>([]);
+  const latitude = useUserLocationStore((s) => s.latitude);
+  const longitude = useUserLocationStore((s) => s.longitude);
 
   useEffect(() => {
     if (!open) return;
@@ -29,10 +32,12 @@ export function LocationSearchInput({
     }
 
     const controller = new AbortController();
+    const near =
+      latitude != null && longitude != null ? { latitude, longitude } : undefined;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
-      void searchPlaces(trimmed)
+      void searchPlaces(trimmed, near)
         .then((places) => {
           if (!controller.signal.aborted) setResults(places);
         })
@@ -51,7 +56,7 @@ export function LocationSearchInput({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [value, open]);
+  }, [value, open, latitude, longitude]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {

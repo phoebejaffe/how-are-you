@@ -1,4 +1,5 @@
 import { createId } from "./ids";
+import { haversineMeters, METERS_PER_FOOT, NEARBY_RADIUS_METERS, type GeoPoint } from "./geo";
 import type { Person, PersonLocation } from "../types";
 
 export function legacyLocationsFromPerson(person: Person): PersonLocation[] {
@@ -73,4 +74,38 @@ export function mergePersonLocations(
   }
 
   return merged.length > 0 ? merged : undefined;
+}
+
+export interface NearbyPersonMatch {
+  person: Person;
+  location: PersonLocation;
+  distanceFeet: number;
+}
+
+export function findNearbyPeople(
+  people: Person[],
+  userLocation: GeoPoint,
+  radiusMeters = NEARBY_RADIUS_METERS,
+): NearbyPersonMatch[] {
+  const matches: NearbyPersonMatch[] = [];
+
+  for (const person of people) {
+    const locations = person.locations ?? legacyLocationsFromPerson(person);
+    for (const location of locations) {
+      if (location.latitude == null || location.longitude == null) continue;
+      const distanceMeters = haversineMeters(userLocation, {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      if (distanceMeters <= radiusMeters) {
+        matches.push({
+          person,
+          location,
+          distanceFeet: distanceMeters / METERS_PER_FOOT,
+        });
+      }
+    }
+  }
+
+  return matches.sort((a, b) => a.distanceFeet - b.distanceFeet);
 }

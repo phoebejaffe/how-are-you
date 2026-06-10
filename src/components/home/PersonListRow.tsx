@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DRAG_SURFACE_ATTR } from "../dnd/dragClickGuard";
 import { locationSummary } from "../../lib/personLocations";
 import type { Person } from "../../types";
@@ -18,6 +18,9 @@ export function PersonListRow({
   dragProps?: HTMLAttributes<HTMLElement>;
   className?: string;
 }) {
+  const navigate = useNavigate();
+  const personPath = `/person/${encodeURIComponent(person.nameKey)}`;
+
   const menuItems = useMemo(
     () =>
       onDelete
@@ -37,10 +40,10 @@ export function PersonListRow({
           dragProps ? "cursor-grab active:cursor-grabbing" : ""
         }`}
       >
-        <Link
-          to={`/person/${encodeURIComponent(person.nameKey)}`}
-          className="flex flex-col gap-0.5 px-4 py-3.5 pr-3 text-[0.9375rem] transition-colors active:bg-white/70"
-          draggable={false}
+        <button
+          type="button"
+          onClick={() => navigate(personPath)}
+          className="flex w-full flex-col gap-0.5 border-0 bg-transparent px-4 py-3.5 pr-3 text-left text-[0.9375rem] transition-colors active:bg-white/70"
         >
           <span className="flex min-w-0 items-baseline justify-between gap-3">
             <span className="min-w-0 break-words font-medium text-ink">{person.displayName}</span>
@@ -51,7 +54,7 @@ export function PersonListRow({
             )}
           </span>
           {hint && <span className="truncate text-xs text-ink-muted">{hint}</span>}
-        </Link>
+        </button>
       </div>
       {menuItems.length > 0 && (
         <div className="mr-1 shrink-0" onPointerDown={(e) => e.stopPropagation()}>

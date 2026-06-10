@@ -1,3 +1,5 @@
+import { haversineMeters, SEARCH_BIAS_RADIUS_METERS, type GeoPoint } from "./geo";
+
 export interface PlaceResult {
   name: string;
   subtitle?: string;
@@ -36,27 +38,54 @@ function formatPlaceSubtitle(properties: PhotonFeature["properties"], name: stri
   return subtitle || undefined;
 }
 
-export async function searchPlaces(query: string): Promise<PlaceResult[]> {
+function mapFeature(feature: PhotonFeature): PlaceResult {
+  const [longitude, latitude] = feature.geometry.coordinates;
+  const name = formatPlaceName(feature.properties);
+  return {
+    name,
+    subtitle: formatPlaceSubtitle(feature.properties, name),
+    latitude,
+    longitude,
+  };
+}
+
+export async function searchPlaces(query: string, near?: GeoPoint): Promise<PlaceResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=6`;
+  const params = new URLSearchParams({
+    q: trimmed,
+    limit: "12",
+  });
+  if (near) {
+    params.set("lat", String(near.latitude));
+    params.set("lon", String(near.longitude));
+    params.set("zoom", "14");
+    params.set("location_bias_scale", "0.2");
+  }
+
+  const url = `https://photon.komoot.io/api/?${params.toString()}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Place search failed.");
   }
 
   const data = (await response.json()) as { features?: PhotonFeature[] };
-  return (data.features ?? []).map((feature) => {
-    const [longitude, latitude] = feature.geometry.coordinates;
-    const name = formatPlaceName(feature.properties);
-    return {
-      name,
-      subtitle: formatPlaceSubtitle(feature.properties, name),
-      latitude,
-      longitude,
-    };
-  });
+  let results = (data.features ?? []).map(mapFeature);
+
+  if (near) {
+    // Photon lat/lon/zoom bias nudges the API; we strongly prefer hits within
+    // SEARCH_BIAS_RADIUS_MILES via haversine, padding with farther matches only
+    // when fewer than six local results exist.
+    const ranked = results
+      .map((place) => ({ place, distanceMeters: haversineMeters(near, place) }))
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
+    const withinRadius = ranked.filter((item) => item.distanceMeters <= SEARCH_BIAS_RADIUS_METERS);
+    const outsideRadius = ranked.filter((item) => item.distanceMeters > SEARCH_BIAS_RADIUS_METERS);
+    results = [...withinRadius, ...outsideRadius].map((item) => item.place);
+  }
+
+  return results.slice(0, 6);
 }
 
 export function mapsUrl(location: { name: string; latitude?: number; longitude?: number }): string {
