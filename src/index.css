@@ -13,6 +13,9 @@
   --color-sage: #6d8f7a;
   --color-sage-dark: #567a66;
   --color-sage-light: #e8f0eb;
+  --color-bi-pink: #d60270;
+  --color-bi-purple: #9b4f96;
+  --color-bi-blue: #0038a8;
   --shadow-soft: 0 1px 3px rgba(42, 36, 28, 0.06), 0 4px 16px rgba(42, 36, 28, 0.04);
   --shadow-lift: 0 2px 8px rgba(42, 36, 28, 0.08), 0 8px 24px rgba(42, 36, 28, 0.06);
   --radius-card: 1rem;
@@ -148,6 +151,63 @@
     box-shadow: var(--shadow-soft);
   }
 
+  .nearby-strip {
+    @apply relative mb-6 rounded-2xl;
+    animation: nearby-ring-glow 30s linear infinite;
+  }
+
+  .nearby-strip-blobs {
+    @apply pointer-events-none absolute inset-0 overflow-hidden rounded-2xl;
+    z-index: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 228, 244, 0.97) 0%,
+      rgba(237, 220, 248, 0.94) 25%,
+      rgba(222, 232, 255, 0.97) 50%,
+      rgba(237, 220, 248, 0.94) 75%,
+      rgba(255, 228, 244, 0.97) 100%
+    );
+    background-size: 200% 100%;
+    animation: nearby-base 36s linear infinite;
+  }
+
+  .nearby-strip-blobs::before,
+  .nearby-strip-blobs::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(42px);
+    opacity: 0.55;
+    will-change: transform;
+  }
+
+  .nearby-strip-blobs::before {
+    width: 72%;
+    height: 72%;
+    top: -22%;
+    left: -18%;
+    background: radial-gradient(circle, rgba(214, 2, 112, 0.5) 0%, transparent 68%);
+    animation: nearby-blob-a 28s linear infinite;
+  }
+
+  .nearby-strip-blobs::after {
+    width: 68%;
+    height: 68%;
+    right: -14%;
+    bottom: -24%;
+    background: radial-gradient(circle, rgba(0, 56, 168, 0.48) 0%, transparent 68%);
+    animation: nearby-blob-b 34s linear infinite;
+  }
+
+  .nearby-strip-content {
+    @apply relative z-[1] px-4 py-4 sm:px-5 sm:py-5;
+  }
+
+  .nearby-strip-title {
+    @apply font-display text-[1.35rem] leading-none tracking-tight text-bi-purple;
+  }
+
   .list-divider > * + * {
     @apply border-t border-stone-200/50;
   }
@@ -161,6 +221,79 @@
     background: rgba(255, 252, 248, 0.97);
     box-shadow: var(--shadow-lift);
     @apply ring-1 ring-stone-200/60 backdrop-blur-md;
+  }
+}
+
+@keyframes nearby-base {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes nearby-ring-glow {
+  0% {
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 2px rgba(155, 79, 150, 0.38);
+  }
+  25% {
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 2px rgba(214, 2, 112, 0.4);
+  }
+  50% {
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 2px rgba(0, 56, 168, 0.38);
+  }
+  75% {
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 2px rgba(155, 79, 150, 0.38);
+  }
+  100% {
+    box-shadow:
+      var(--shadow-lift),
+      0 0 0 2px rgba(155, 79, 150, 0.38);
+  }
+}
+
+@keyframes nearby-blob-a {
+  0% {
+    transform: translate(0%, 0%) scale(1);
+  }
+  25% {
+    transform: translate(30%, 18%) scale(1.06);
+  }
+  50% {
+    transform: translate(14%, 38%) scale(0.97);
+  }
+  75% {
+    transform: translate(-16%, 14%) scale(1.03);
+  }
+  100% {
+    transform: translate(0%, 0%) scale(1);
+  }
+}
+
+@keyframes nearby-blob-b {
+  0% {
+    transform: translate(0%, 0%) scale(1);
+  }
+  25% {
+    transform: translate(-26%, -18%) scale(1.05);
+  }
+  50% {
+    transform: translate(-12%, -36%) scale(0.98);
+  }
+  75% {
+    transform: translate(20%, -16%) scale(1.04);
+  }
+  100% {
+    transform: translate(0%, 0%) scale(1);
   }
 }
 
@@ -190,6 +323,21 @@
 
 @media (prefers-reduced-motion: reduce) {
   .page-enter {
+    animation: none;
+  }
+
+  .nearby-strip {
+    animation: none;
+    box-shadow: var(--shadow-lift), 0 0 0 2px rgba(155, 79, 150, 0.38);
+  }
+
+  .nearby-strip-blobs {
+    animation: none;
+    background-size: 100% 100%;
+  }
+
+  .nearby-strip-blobs::before,
+  .nearby-strip-blobs::after {
     animation: none;
   }
 

@@ -65,6 +65,10 @@ export function HomePage() {
         </Link>
       </header>
 
+      {locationStatus === "granted" && userLatitude != null && userLongitude != null && (
+        <NearbyPeopleSection people={allPeople} latitude={userLatitude} longitude={userLongitude} />
+      )}
+
       <div className="card-padded mb-6 space-y-4">
         <input
           type="search"
@@ -87,10 +91,6 @@ export function HomePage() {
         </form>
         {error && <p className="text-sm text-terracotta-dark">{error}</p>}
       </div>
-
-      {locationStatus === "granted" && userLatitude != null && userLongitude != null && (
-        <NearbyPeopleSection people={allPeople} latitude={userLatitude} longitude={userLongitude} />
-      )}
 
       <FriendsSection
         people={searching ? visible : allPeople}
