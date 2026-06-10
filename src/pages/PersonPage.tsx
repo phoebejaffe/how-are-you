@@ -7,6 +7,7 @@ import { PersonLocationsSection } from "../components/person/PersonLocationsSect
 import { PinnedFactsSection } from "../components/person/PinnedFactsSection";
 import { CheckIcon } from "../components/ui/CheckIcon";
 import { RowMenu } from "../components/ui/RowMenu";
+import { findPersonKey } from "../lib/ids";
 import { sortPinnedFacts } from "../lib/factOrder";
 import { computeTimeCluster } from "../lib/timeCluster";
 import { sortPinnedTopics, sortUnpinnedTopics } from "../lib/topicOrder";
@@ -16,7 +17,13 @@ export function PersonPage() {
   const navigate = useNavigate();
   const { nameKey: encoded } = useParams();
   const nameKey = encoded ? decodeURIComponent(encoded) : "";
-  const bundle = useAppStore((s) => s.bundles[nameKey]);
+  const ready = useAppStore((s) => s.ready);
+  const people = useAppStore((s) => s.people);
+  const resolvedKey = useMemo(
+    () => (nameKey ? findPersonKey(people, nameKey) : null),
+    [people, nameKey],
+  );
+  const bundle = useAppStore((s) => s.bundles[resolvedKey ?? ""]);
   const pendingTopicDeletes = useAppStore((s) => s.pendingTopicDeletes);
   const pendingFactDeletes = useAppStore((s) => s.pendingFactDeletes);
   const pendingFollowUpDeletes = useAppStore((s) => s.pendingFollowUpDeletes);
@@ -57,10 +64,25 @@ export function PersonPage() {
   const [nameInput, setNameInput] = useState("");
   const [nameError, setNameError] = useState("");
   const [clusterAnchorIso, setClusterAnchorIso] = useState<string | null>(null);
+  const [bundleLoaded, setBundleLoaded] = useState(false);
 
   useEffect(() => {
-    if (nameKey) void loadBundle(nameKey);
-  }, [nameKey, loadBundle]);
+    if (!ready || !nameKey) {
+      setBundleLoaded(true);
+      return;
+    }
+    const key = findPersonKey(people, nameKey);
+    if (!key) {
+      setBundleLoaded(true);
+      return;
+    }
+    if (key !== nameKey) {
+      navigate(`/person/${encodeURIComponent(key)}`, { replace: true });
+      return;
+    }
+    setBundleLoaded(false);
+    void loadBundle(key).finally(() => setBundleLoaded(true));
+  }, [ready, nameKey, people, loadBundle, navigate]);
 
   useEffect(() => {
     setClusterAnchorIso(null);
@@ -113,7 +135,9 @@ export function PersonPage() {
     };
   }, [bundle, pendingFactDeletes]);
 
-  if (!bundle) {
+  const pageKey = resolvedKey ?? nameKey;
+
+  if (!ready || (nameKey && resolvedKey === nameKey && !bundleLoaded)) {
     return (
       <div className="page page-enter">
         <Link to="/" className="back-link">
@@ -124,12 +148,26 @@ export function PersonPage() {
     );
   }
 
+  if (!resolvedKey || !bundle) {
+    return (
+      <div className="page page-enter">
+        <Link to="/" className="back-link">
+          ← Friends
+        </Link>
+        <h1 className="mt-5 font-display text-[1.75rem] font-normal text-ink">Person not found</h1>
+        <p className="mt-2 text-sm text-ink-muted">
+          This friend may have been deleted, or the link might be wrong.
+        </p>
+      </div>
+    );
+  }
+
   async function saveName() {
     setNameError("");
     try {
-      const newKey = await renamePerson(nameKey, nameInput);
+      const newKey = await renamePerson(pageKey, nameInput);
       setEditingName(false);
-      if (newKey !== nameKey) {
+      if (newKey !== pageKey) {
         navigate(`/person/${encodeURIComponent(newKey)}`, { replace: true });
       }
     } catch (err) {
@@ -182,7 +220,7 @@ export function PersonPage() {
 
       <PersonLocationsSection
         person={bundle.person}
-        onSave={(locations) => void updatePersonLocations(nameKey, locations)}
+        onSave={(locations) => void updatePersonLocations(pageKey, locations)}
       />
 
       <div className="space-y-5">
@@ -193,7 +231,7 @@ export function PersonPage() {
           onDelete={(factId) => void scheduleDeleteFact(factId)}
           onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
           onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
-          onReorderPinnedFacts={(draggedId, targetId) => void reorderPinnedFacts(nameKey, draggedId, targetId)}
+          onReorderPinnedFacts={(draggedId, targetId) => void reorderPinnedFacts(pageKey, draggedId, targetId)}
         />
 
         <PinnedTopicsSection
@@ -212,11 +250,11 @@ export function PersonPage() {
           onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
           onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
           onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
-          onReorderPinnedTopics={(draggedId, targetId) => void reorderPinnedTopics(nameKey, draggedId, targetId)}
+          onReorderPinnedTopics={(draggedId, targetId) => void reorderPinnedTopics(pageKey, draggedId, targetId)}
         />
 
         <TopicsSection
-          personKey={nameKey}
+          personKey={pageKey}
           unpinnedTopics={visibleTopics.unpinned}
           folders={topicFolders}
           archivedTopics={visibleTopics.archived}
@@ -225,7 +263,7 @@ export function PersonPage() {
           topicHighlighted={(id) => timeCluster.topicIds.has(id)}
           followUpHighlighted={(id) => timeCluster.followUpIds.has(id)}
           onClusterSelect={handleClusterSelect}
-          onAddTopic={(text, channel, folderId) => void addTopic(nameKey, text, channel, folderId)}
+          onAddTopic={(text, channel, folderId) => void addTopic(pageKey, text, channel, folderId)}
           onPin={(id) => void toggleTopicPin(id)}
           onArchive={(id) => void scheduleArchiveTopic(id)}
           onUnarchive={(id) => void unarchiveTopic(id)}
@@ -235,29 +273,29 @@ export function PersonPage() {
           onEditFollowUp={(id, text, ch) => void updateFollowUp(id, text, ch)}
           onDeleteFollowUp={(id) => void scheduleDeleteFollowUp(id)}
           onMoveToFolder={(topicId, folderId) => void moveTopicToFolder(topicId, folderId)}
-          onAddFolder={(name) => void addTopicFolder(nameKey, name)}
+          onAddFolder={(name) => void addTopicFolder(pageKey, name)}
           onRenameFolder={(folderId, name) => void renameTopicFolder(folderId, name)}
           onDeleteFolder={(folderId) => void deleteTopicFolder(folderId)}
           onToggleFolderCollapsed={(folderId) => void toggleTopicFolderCollapsed(folderId)}
-          onReorderLayout={(draggedId, targetId) => void reorderTopicsLayout(nameKey, draggedId, targetId)}
-          onReorderTopics={(draggedId, targetId) => void reorderTopics(nameKey, draggedId, targetId)}
+          onReorderLayout={(draggedId, targetId) => void reorderTopicsLayout(pageKey, draggedId, targetId)}
+          onReorderTopics={(draggedId, targetId) => void reorderTopics(pageKey, draggedId, targetId)}
         />
 
         <FactsSection
-          personKey={nameKey}
+          personKey={pageKey}
           folders={bundle.factFolders ?? []}
           unpinnedFacts={unpinnedFacts}
-          onAddFact={(text, folderId) => void addFact(nameKey, text, "text", false, folderId)}
+          onAddFact={(text, folderId) => void addFact(pageKey, text, "text", false, folderId)}
           onPin={(factId) => void toggleFactPin(factId)}
           onDeleteFact={(factId) => void scheduleDeleteFact(factId)}
           onEdit={(factId, text, ch) => void updateFact(factId, text, ch)}
           onMoveToFolder={(factId, folderId) => void moveFactToFolder(factId, folderId)}
-          onAddFolder={(name) => void addFactFolder(nameKey, name)}
+          onAddFolder={(name) => void addFactFolder(pageKey, name)}
           onRenameFolder={(folderId, name) => void renameFactFolder(folderId, name)}
           onDeleteFolder={(folderId) => void deleteFactFolder(folderId)}
           onToggleFolderCollapsed={(folderId) => void toggleFactFolderCollapsed(folderId)}
-          onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(nameKey, draggedId, targetId)}
-          onReorderFacts={(draggedId, targetId) => void reorderFacts(nameKey, draggedId, targetId)}
+          onReorderLayout={(draggedId, targetId) => void reorderFactsLayout(pageKey, draggedId, targetId)}
+          onReorderFacts={(draggedId, targetId) => void reorderFacts(pageKey, draggedId, targetId)}
         />
       </div>
     </div>
