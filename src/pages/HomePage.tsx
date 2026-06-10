@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FriendsSection } from "../components/home/FriendsSection";
-import { NearbyPeopleSection } from "../components/home/NearbyPeopleSection";
+import { NearbyLocationSection } from "../components/home/NearbyLocationSection";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { useAppStore } from "../store/appStore";
-import { useUserLocationStore } from "../store/userLocationStore";
 
 export function HomePage() {
   const people = useAppStore((s) => s.people);
@@ -19,9 +18,6 @@ export function HomePage() {
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
   const dropPersonOnPerson = useAppStore((s) => s.dropPersonOnPerson);
   const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
-  const locationStatus = useUserLocationStore((s) => s.status);
-  const userLatitude = useUserLocationStore((s) => s.latitude);
-  const userLongitude = useUserLocationStore((s) => s.longitude);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
@@ -65,9 +61,7 @@ export function HomePage() {
         </Link>
       </header>
 
-      {locationStatus === "granted" && userLatitude != null && userLongitude != null && (
-        <NearbyPeopleSection people={allPeople} latitude={userLatitude} longitude={userLongitude} />
-      )}
+      <NearbyLocationSection people={allPeople} />
 
       <div className="card-padded mb-6 space-y-4">
         <input
