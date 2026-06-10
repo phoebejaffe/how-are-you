@@ -1,5 +1,5 @@
 import type { Person } from "../types";
-import { personNameKey } from "../lib/ids";
+import { personNameKey, personNameKeysMatch } from "../lib/ids";
 
 export function validateRename(
   people: Person[],
@@ -14,7 +14,7 @@ export function validateRename(
   if (newKey === currentKey) {
     return { ok: true, newKey };
   }
-  if (people.some((p) => p.nameKey === newKey)) {
+  if (people.some((p) => p.nameKey !== currentKey && personNameKeysMatch(p.nameKey, newKey))) {
     return { ok: false, error: `Someone named "${trimmed}" already exists.` };
   }
   return { ok: true, newKey };

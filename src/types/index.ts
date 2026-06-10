@@ -12,6 +12,14 @@ export interface PersonLocation {
   longitude?: number;
 }
 
+export interface ImportantDate {
+  id: string;
+  label: string;
+  month: number;
+  day: number;
+  year?: number;
+}
+
 export interface Person {
   nameKey: string;
   displayName: string;
@@ -24,6 +32,7 @@ export interface Person {
   /** @deprecated Migrated to `locations` on read. */
   workLocation?: string;
   locations?: PersonLocation[];
+  importantDates?: ImportantDate[];
   lastActivityAtIso?: string;
   lastActivityType?: ActivityType;
 }
