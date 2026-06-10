@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FriendsSection } from "../components/home/FriendsSection";
 import { NearbyLocationSection } from "../components/home/NearbyLocationSection";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { personMatchesSearch } from "../lib/peopleSearch";
 import { useAppStore } from "../store/appStore";
 
 export function HomePage() {
@@ -18,6 +19,8 @@ export function HomePage() {
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
   const dropPersonOnPerson = useAppStore((s) => s.dropPersonOnPerson);
   const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
+  const bundles = useAppStore((s) => s.bundles);
+  const ensureSearchBundles = useAppStore((s) => s.ensureSearchBundles);
   const [query, setQuery] = useState("");
   const [newName, setNewName] = useState("");
   const [error, setError] = useState("");
@@ -28,11 +31,16 @@ export function HomePage() {
     [people, pendingDeletes],
   );
 
+  useEffect(() => {
+    if (!query.trim()) return;
+    void ensureSearchBundles();
+  }, [query, ensureSearchBundles]);
+
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return allPeople;
-    return allPeople.filter((p) => p.displayName.toLowerCase().includes(q));
-  }, [allPeople, query]);
+    return allPeople.filter((person) => personMatchesSearch(person, bundles[person.nameKey], q));
+  }, [allPeople, query, bundles]);
 
   const searching = query.trim().length > 0;
 
@@ -68,7 +76,7 @@ export function HomePage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search friends…"
+          placeholder="Search friends, topics, and facts…"
           className="input"
         />
 

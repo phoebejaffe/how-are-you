@@ -102,6 +102,7 @@ interface AppState {
   reorderPeople: (draggedKey: string, targetKey: string) => Promise<void>;
   dropPersonOnPerson: (draggedKey: string, targetKey: string) => Promise<void>;
   updatePersonLocations: (nameKey: string, locations: PersonLocation[]) => Promise<void>;
+  ensureSearchBundles: () => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
@@ -919,6 +920,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     await get().reorderPeople(draggedKey, targetKey);
+  },
+
+  async ensureSearchBundles() {
+    const missing = get().people.filter((person) => !get().bundles[person.nameKey]);
+    await Promise.all(missing.map((person) => get().loadBundle(person.nameKey)));
   },
 
   async updatePersonLocations(nameKey, locations) {
