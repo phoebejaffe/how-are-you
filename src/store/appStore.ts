@@ -39,6 +39,7 @@ import type {
   Fact,
   FactFolder,
   FollowUp,
+  ImportantDate,
   ImportConflictResolution,
   PeopleFolder,
   Person,
@@ -103,6 +104,7 @@ interface AppState {
   dropPersonOnPerson: (draggedKey: string, targetKey: string) => Promise<void>;
   updatePersonLocations: (nameKey: string, locations: PersonLocation[]) => Promise<void>;
   ensureSearchBundles: () => Promise<void>;
+  updatePersonImportantDates: (nameKey: string, dates: ImportantDate[]) => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
@@ -936,6 +938,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...rest,
       updatedAtIso: nowIso(),
       locations: locations.length > 0 ? locations : undefined,
+    };
+
+    await repo.savePerson(next);
+    set({
+      people: get().people.map((p) => (p.nameKey === nameKey ? next : p)),
+      bundles: {
+        ...get().bundles,
+        [nameKey]: get().bundles[nameKey]
+          ? { ...get().bundles[nameKey], person: next }
+          : get().bundles[nameKey],
+      },
+    });
+  },
+
+  async updatePersonImportantDates(nameKey, dates) {
+    const person = get().people.find((p) => p.nameKey === nameKey);
+    if (!person) return;
+
+    const next: Person = {
+      ...person,
+      updatedAtIso: nowIso(),
+      importantDates: dates.length > 0 ? dates : undefined,
     };
 
     await repo.savePerson(next);

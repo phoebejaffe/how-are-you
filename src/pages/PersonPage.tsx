@@ -11,6 +11,7 @@ import { findPersonKey } from "../lib/ids";
 import { sortPinnedFacts } from "../lib/factOrder";
 import { computeTimeCluster } from "../lib/timeCluster";
 import { sortPinnedTopics, sortUnpinnedTopics } from "../lib/topicOrder";
+import { PersonImportantDatesSection } from "../components/person/PersonImportantDatesSection";
 import { useAppStore } from "../store/appStore";
 
 export function PersonPage() {
@@ -30,6 +31,7 @@ export function PersonPage() {
   const loadBundle = useAppStore((s) => s.loadBundle);
   const renamePerson = useAppStore((s) => s.renamePerson);
   const updatePersonLocations = useAppStore((s) => s.updatePersonLocations);
+  const updatePersonImportantDates = useAppStore((s) => s.updatePersonImportantDates);
   const addTopic = useAppStore((s) => s.addTopic);
   const addFact = useAppStore((s) => s.addFact);
   const scheduleArchiveTopic = useAppStore((s) => s.scheduleArchiveTopic);
@@ -221,6 +223,11 @@ export function PersonPage() {
       <PersonLocationsSection
         person={bundle.person}
         onSave={(locations) => void updatePersonLocations(pageKey, locations)}
+      />
+
+      <PersonImportantDatesSection
+        person={bundle.person}
+        onSave={(dates) => void updatePersonImportantDates(pageKey, dates)}
       />
 
       <div className="space-y-5">
