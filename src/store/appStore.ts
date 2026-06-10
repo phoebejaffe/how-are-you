@@ -31,7 +31,7 @@ import {
 } from "../lib/peopleFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
 import { nextSortOrderForTopic, pinnedTopicsAfterReorder, topicsAfterReorder } from "../lib/topicOrder";
-import { createId, nowIso, personNameKey } from "../lib/ids";
+import { createId, nowIso, personNameKey, personNameKeysMatch } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
   ActivityType,
@@ -229,7 +229,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   async addPerson(displayName) {
     const key = personNameKey(displayName);
     if (!key) throw new Error("Name cannot be empty.");
-    if (get().people.some((p) => p.nameKey === key)) {
+    if (get().people.some((p) => personNameKeysMatch(p.nameKey, key))) {
       throw new Error(`Someone named "${displayName.trim()}" already exists.`);
     }
     const now = nowIso();
