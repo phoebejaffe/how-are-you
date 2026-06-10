@@ -1,4 +1,5 @@
 import type { ImportConflict, ImportConflictResolution } from "../../types";
+import { DialogOverlay } from "../ui/DialogOverlay";
 
 export function ImportConflictDialog({
   conflict,
@@ -14,7 +15,7 @@ export function ImportConflictDialog({
   const name = conflict.imported.person.displayName;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-5 backdrop-blur-[2px]">
+    <DialogOverlay>
       <div className="dialog-panel max-w-md">
         <p className="section-label">
           Import conflict {index + 1} of {total}
@@ -37,6 +38,6 @@ export function ImportConflictDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   );
 }

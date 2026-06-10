@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { DialogOverlay } from "./DialogOverlay";
 
 export function ConfirmDialog({
   open,
@@ -24,7 +25,7 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/25 p-5 backdrop-blur-[2px]">
+    <DialogOverlay>
       <div
         role="alertdialog"
         aria-labelledby="confirm-title"
@@ -46,6 +47,6 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   );
 }
