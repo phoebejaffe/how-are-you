@@ -25,7 +25,7 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <DialogOverlay>
+    <DialogOverlay onClose={onCancel}>
       <div
         role="alertdialog"
         aria-labelledby="confirm-title"
