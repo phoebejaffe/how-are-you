@@ -19,7 +19,8 @@ export function SortableFactItem({
   onEdit: (text: string, channel: Channel) => void;
   onMoveToFolder?: (folderId: string | null) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({
     id: factDragId(fact.id),
     data: { type: "fact", factId: fact.id } satisfies FactDragData,
   });
@@ -38,6 +39,7 @@ export function SortableFactItem({
         onDelete={onDelete}
         onEdit={onEdit}
         onMoveToFolder={onMoveToFolder}
+        sortableHandleRef={setActivatorNodeRef}
         sortableHandleProps={{ ...attributes, ...listeners }}
       />
     </div>

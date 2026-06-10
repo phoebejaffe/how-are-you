@@ -13,6 +13,7 @@ export function FactCollectionItem({
   onDelete,
   onEdit,
   onMoveToFolder,
+  sortableHandleRef,
   sortableHandleProps,
 }: {
   fact: Fact;
@@ -22,7 +23,8 @@ export function FactCollectionItem({
   onDelete: () => void;
   onEdit: (text: string, channel: Channel) => void;
   onMoveToFolder?: (folderId: string | null) => void;
-  sortableHandleProps?: HTMLAttributes<HTMLElement>;
+  sortableHandleRef?: (node: HTMLButtonElement | null) => void;
+  sortableHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }) {
   const folderRefs: CollectionFolderRef[] = folders.map((f) => ({ id: f.id, name: f.name }));
 
@@ -50,6 +52,7 @@ export function FactCollectionItem({
       deleteTitle="Delete fact?"
       deleteMessage="This fact will be permanently removed."
       dragId={draggable && !sortableHandleProps ? factDragId(fact.id) : undefined}
+      sortableHandleRef={sortableHandleRef}
       sortableHandleProps={sortableHandleProps}
     />
   );

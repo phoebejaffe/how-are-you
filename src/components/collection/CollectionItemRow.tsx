@@ -2,7 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { useMemo, useState, type HTMLAttributes } from "react";
 import type { Channel } from "../../types";
-import { DRAG_SURFACE_ATTR } from "../dnd/dragClickGuard";
+import { DragHandle } from "../dnd/DragHandle";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { EntryRow } from "../ui/EntryRow";
 import { InlineEditor } from "../ui/InlineEditor";
@@ -31,6 +31,7 @@ export function CollectionItemRow({
   disclosureCount,
   onRowClick,
   onClusterSelect,
+  sortableHandleRef,
   sortableHandleProps,
 }: {
   text: string;
@@ -54,13 +55,14 @@ export function CollectionItemRow({
   disclosureCount?: number;
   onRowClick?: () => void;
   onClusterSelect?: (timestampIso: string) => void;
-  sortableHandleProps?: HTMLAttributes<HTMLElement>;
+  sortableHandleRef?: (node: HTMLButtonElement | null) => void;
+  sortableHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const draggable = Boolean(features.draggable && dragId);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, isDragging } = useDraggable({
     id: dragId ?? "disabled",
     disabled: !draggable || editing,
   });
@@ -85,6 +87,19 @@ export function CollectionItemRow({
     [text, pinned, archived, currentFolderId, folders, features, menuActions],
   );
 
+  const confirmDialog = (
+    <ConfirmDialog
+      open={confirmDelete}
+      title={deleteTitle}
+      message={deleteMessage}
+      onConfirm={() => {
+        setConfirmDelete(false);
+        menuActions.onDelete();
+      }}
+      onCancel={() => setConfirmDelete(false)}
+    />
+  );
+
   if (editing) {
     return (
       <div className={compact ? "py-0.5" : "py-2"}>
@@ -103,8 +118,16 @@ export function CollectionItemRow({
     );
   }
 
+  const handle =
+    sortableHandleProps ? (
+      <DragHandle ref={sortableHandleRef} compact {...sortableHandleProps} />
+    ) : draggable ? (
+      <DragHandle ref={setActivatorNodeRef} compact {...attributes} {...listeners} />
+    ) : undefined;
+
   const row = (
     <EntryRow
+      leading={handle}
       text={text}
       timestampIso={timestampIso}
       channel={features.showChannel ? channel : undefined}
@@ -119,66 +142,21 @@ export function CollectionItemRow({
     />
   );
 
-  if (sortableHandleProps) {
+  if (draggable) {
     return (
       <>
-        <div className="touch-none select-none" {...{ [DRAG_SURFACE_ATTR]: "" }} {...sortableHandleProps}>
+        <div ref={setNodeRef} style={style} className={isDragging ? "z-10 opacity-40" : ""}>
           {row}
         </div>
-        <ConfirmDialog
-          open={confirmDelete}
-          title={deleteTitle}
-          message={deleteMessage}
-          onConfirm={() => {
-            setConfirmDelete(false);
-            menuActions.onDelete();
-          }}
-          onCancel={() => setConfirmDelete(false)}
-        />
-      </>
-    );
-  }
-
-  if (!draggable) {
-    return (
-      <>
-        {row}
-        <ConfirmDialog
-          open={confirmDelete}
-          title={deleteTitle}
-          message={deleteMessage}
-          onConfirm={() => {
-            setConfirmDelete(false);
-            menuActions.onDelete();
-          }}
-          onCancel={() => setConfirmDelete(false)}
-        />
+        {confirmDialog}
       </>
     );
   }
 
   return (
     <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        className={`touch-none select-none ${isDragging ? "z-10 opacity-40" : ""}`}
-        {...{ [DRAG_SURFACE_ATTR]: "" }}
-        {...listeners}
-        {...attributes}
-      >
-        {row}
-      </div>
-      <ConfirmDialog
-        open={confirmDelete}
-        title={deleteTitle}
-        message={deleteMessage}
-        onConfirm={() => {
-          setConfirmDelete(false);
-          menuActions.onDelete();
-        }}
-        onCancel={() => setConfirmDelete(false)}
-      />
+      {row}
+      {confirmDialog}
     </>
   );
 }

@@ -38,7 +38,8 @@ export function SortableTopicCollectionItem({
   onDeleteFollowUp: (followUpId: string) => void;
   onMoveToFolder?: (folderId: string | null) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({
     id: topicDragId(topic.id),
   });
 
@@ -65,6 +66,7 @@ export function SortableTopicCollectionItem({
         onEditFollowUp={onEditFollowUp}
         onDeleteFollowUp={onDeleteFollowUp}
         onMoveToFolder={onMoveToFolder}
+        sortableHandleRef={setActivatorNodeRef}
         sortableHandleProps={{ ...attributes, ...listeners }}
       />
     </div>

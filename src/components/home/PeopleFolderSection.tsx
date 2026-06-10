@@ -64,6 +64,7 @@ export function PeopleFolderSection({
         onToggleCollapsed={onToggleCollapsed}
         onRename={onRename}
         onDeleteRequest={() => setConfirmDelete(true)}
+        sortableHandleRef={sortable ? folderSortable.setActivatorNodeRef : undefined}
         sortableHandleProps={
           sortable ? { ...folderSortable.attributes, ...folderSortable.listeners } : undefined
         }

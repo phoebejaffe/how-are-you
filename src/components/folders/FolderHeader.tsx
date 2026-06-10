@@ -1,9 +1,9 @@
 import { useState, type HTMLAttributes } from "react";
-import { DRAG_SURFACE_ATTR } from "../dnd/dragClickGuard";
+import { DragHandle } from "../dnd/DragHandle";
 import { CheckIcon } from "../ui/CheckIcon";
 import { RowMenu, type RowMenuItem } from "../ui/RowMenu";
 
-type HandleProps = HTMLAttributes<HTMLElement>;
+type HandleProps = HTMLAttributes<HTMLButtonElement>;
 
 export function FolderHeader({
   name,
@@ -13,6 +13,7 @@ export function FolderHeader({
   onToggleCollapsed,
   onRename,
   onDeleteRequest,
+  sortableHandleRef,
   sortableHandleProps,
   flush = false,
 }: {
@@ -23,6 +24,7 @@ export function FolderHeader({
   onToggleCollapsed: () => void;
   onRename: (name: string) => void;
   onDeleteRequest: () => void;
+  sortableHandleRef?: (node: HTMLButtonElement | null) => void;
   sortableHandleProps?: HandleProps;
   flush?: boolean;
 }) {
@@ -43,7 +45,7 @@ export function FolderHeader({
 
   return (
     <div
-      className={`flex items-center gap-1 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
+      className={`flex items-center gap-0.5 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
     >
       {editingName ? (
         <form
@@ -79,12 +81,13 @@ export function FolderHeader({
         </form>
       ) : (
         <>
+          {sortableHandleProps && (
+            <DragHandle ref={sortableHandleRef} compact className="shrink-0" {...sortableHandleProps} />
+          )}
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className={`flex min-h-11 min-w-0 flex-1 cursor-pointer touch-none select-none items-center gap-2 rounded-xl text-left text-sm font-semibold text-ink transition-colors active:bg-white/50 ${flush ? "px-1" : "px-1"}`}
-            {...{ [DRAG_SURFACE_ATTR]: sortableHandleProps ? "" : undefined }}
-            {...sortableHandleProps}
+            className={`flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-xl px-1 text-left text-sm font-semibold text-ink transition-colors active:bg-white/50`}
           >
             <span className="flex min-w-0 flex-1 items-baseline">
               <span className="truncate">{name}</span>
@@ -106,25 +109,26 @@ export function UnsortedFolderHeader({
   label,
   count,
   isFolderReorderTarget,
+  sortableHandleRef,
   sortableHandleProps,
   flush = false,
 }: {
   label: string;
   count: number;
   isFolderReorderTarget: boolean;
+  sortableHandleRef?: (node: HTMLButtonElement | null) => void;
   sortableHandleProps?: HandleProps;
   flush?: boolean;
 }) {
   const padX = flush ? "px-3" : "px-4";
   return (
     <div
-      className={`flex items-center gap-1 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
+      className={`flex items-center gap-0.5 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
     >
-      <div
-        className={`flex min-h-11 min-w-0 flex-1 touch-none select-none items-center gap-2 text-sm font-semibold text-ink-muted`}
-        {...{ [DRAG_SURFACE_ATTR]: sortableHandleProps ? "" : undefined }}
-        {...sortableHandleProps}
-      >
+      {sortableHandleProps && (
+        <DragHandle ref={sortableHandleRef} compact className="shrink-0" {...sortableHandleProps} />
+      )}
+      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-1 text-sm font-semibold text-ink-muted">
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 text-xs font-normal tabular-nums">({count})</span>
       </div>

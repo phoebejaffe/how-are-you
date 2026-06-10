@@ -50,6 +50,7 @@ export function UnsortedPeopleSection({
         label="Unsorted"
         count={people.length}
         isFolderReorderTarget={folderSortable.isOver && !folderSortable.isDragging}
+        sortableHandleRef={sortable ? folderSortable.setActivatorNodeRef : undefined}
         sortableHandleProps={
           sortable ? { ...folderSortable.attributes, ...folderSortable.listeners } : undefined
         }

@@ -27,6 +27,7 @@ export function TopicCollectionItem({
   topicHighlighted = false,
   followUpHighlighted,
   onClusterSelect,
+  sortableHandleRef,
   sortableHandleProps,
   pinnedStrip = false,
 }: {
@@ -47,7 +48,8 @@ export function TopicCollectionItem({
   topicHighlighted?: boolean;
   followUpHighlighted?: (followUpId: string) => boolean;
   onClusterSelect?: (timestampIso: string) => void;
-  sortableHandleProps?: HTMLAttributes<HTMLElement>;
+  sortableHandleRef?: (node: HTMLButtonElement | null) => void;
+  sortableHandleProps?: HTMLAttributes<HTMLButtonElement>;
   pinnedStrip?: boolean;
 }) {
   const [followUpText, setFollowUpText] = useState("");
@@ -125,6 +127,7 @@ export function TopicCollectionItem({
         disclosureCount={topicFollowUps.length}
         onRowClick={canShowFollowUpSection ? toggleFollowUps : undefined}
         onClusterSelect={onClusterSelect}
+        sortableHandleRef={archived ? undefined : sortableHandleRef}
         sortableHandleProps={archived ? undefined : sortableHandleProps}
       />
 

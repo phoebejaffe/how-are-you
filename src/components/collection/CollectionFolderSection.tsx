@@ -56,6 +56,7 @@ export function CollectionFolderSection({
         onToggleCollapsed={onToggleCollapsed}
         onRename={onRename}
         onDeleteRequest={() => setConfirmDelete(true)}
+        sortableHandleRef={sortable.setActivatorNodeRef}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         flush
       />

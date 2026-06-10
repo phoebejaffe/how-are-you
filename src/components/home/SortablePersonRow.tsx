@@ -13,10 +13,11 @@ export function SortablePersonRow({
   onDelete?: () => void;
   sortable?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: personDragId(person.nameKey),
-    disabled: !sortable,
-  });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id: personDragId(person.nameKey),
+      disabled: !sortable,
+    });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -32,7 +33,8 @@ export function SortablePersonRow({
       <PersonListRow
         person={person}
         onDelete={onDelete}
-        dragProps={{ ...attributes, ...listeners }}
+        dragHandleRef={setActivatorNodeRef}
+        dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
   );

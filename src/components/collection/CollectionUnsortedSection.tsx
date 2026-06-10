@@ -43,6 +43,7 @@ export function CollectionUnsortedSection({
         label={label}
         count={itemCount}
         isFolderReorderTarget={sortable.isOver && !sortable.isDragging}
+        sortableHandleRef={sortable.setActivatorNodeRef}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         flush
       />

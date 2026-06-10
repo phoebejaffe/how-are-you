@@ -39,7 +39,8 @@ export function SortableTopicItem({
   onMoveToFolder?: (folderId: string | null) => void;
   pinnedStrip?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({
     id: topicSortId(topic.id),
     data: { type: "topic-sort", topicId: topic.id } satisfies TopicSortData,
   });
@@ -67,6 +68,7 @@ export function SortableTopicItem({
         onDeleteFollowUp={onDeleteFollowUp}
         onMoveToFolder={onMoveToFolder}
         pendingFollowUpDeletes={pendingFollowUpDeletes}
+        sortableHandleRef={setActivatorNodeRef}
         sortableHandleProps={{ ...attributes, ...listeners }}
         pinnedStrip={pinnedStrip}
       />
