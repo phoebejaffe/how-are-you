@@ -1,7 +1,9 @@
-import { closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
+import { AppDragOverlay } from "../dnd/AppDragOverlay";
+import { CollectionItemOverlay } from "../dnd/CollectionItemOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
 import { factDragId } from "../dnd/dndIds";
 import { useAppDndSensors } from "../dnd/dndSensors";
@@ -26,9 +28,17 @@ export function PinnedFactsSection({
 }) {
   const sensors = useAppDndSensors();
   const sortableIds = useMemo(() => facts.map((f) => factDragId(f.id)), [facts]);
+  const [activeFactId, setActiveFactId] = useState<string | null>(null);
+  const activeFact = activeFactId ? facts.find((f) => f.id === activeFactId) : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    const id = String(event.active.id);
+    if (id.startsWith("fact:")) setActiveFactId(id.slice("fact:".length));
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
+    setActiveFactId(null);
     if (!over) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -41,7 +51,12 @@ export function PinnedFactsSection({
   return (
     <section className="pinned-strip">
       <h2 className="section-label mb-2 text-amber-800/80">Pinned facts</h2>
-      <AppDndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <AppDndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           {facts.map((fact) => (
             <SortableFactItem
@@ -55,6 +70,12 @@ export function PinnedFactsSection({
             />
           ))}
         </SortableContext>
+
+        <AppDragOverlay>
+          {activeFact ? (
+            <CollectionItemOverlay text={activeFact.text} timestampIso={activeFact.recordedAtIso} compact />
+          ) : null}
+        </AppDragOverlay>
       </AppDndContext>
     </section>
   );

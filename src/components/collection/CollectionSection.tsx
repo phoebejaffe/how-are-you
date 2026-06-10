@@ -1,5 +1,6 @@
-import { DragOverlay, closestCenter, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { closestCenter, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
+import { AppDragOverlay } from "../dnd/AppDragOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BaseFolder } from "../../lib/folders";
@@ -268,9 +269,9 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
         })}
       </SortableContext>
 
-      <DragOverlay dropAnimation={null}>
+      <AppDragOverlay>
         {activeItem && renderDragOverlay ? renderDragOverlay(activeItem) : null}
-      </DragOverlay>
+      </AppDragOverlay>
     </AppDndContext>
   ) : (
     items.map((item) => <div key={item.id}>{renderItem(item, { draggable: false, sortable: false })}</div>)

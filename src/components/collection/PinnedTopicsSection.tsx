@@ -1,7 +1,9 @@
-import { closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { closestCenter, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
+import { AppDragOverlay } from "../dnd/AppDragOverlay";
+import { CollectionItemOverlay } from "../dnd/CollectionItemOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Channel, FollowUp, Topic, TopicFolder } from "../../types";
 import { topicSortId, topicIdFromSortId, isTopicSortId } from "../dnd/dndIds";
 import { useAppDndSensors } from "../dnd/dndSensors";
@@ -44,9 +46,17 @@ export function PinnedTopicsSection({
 }) {
   const sensors = useAppDndSensors();
   const sortableIds = useMemo(() => topics.map((t) => topicSortId(t.id)), [topics]);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+  const activeTopic = activeTopicId ? topics.find((t) => t.id === activeTopicId) : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    const id = String(event.active.id);
+    if (isTopicSortId(id)) setActiveTopicId(topicIdFromSortId(id));
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
+    setActiveTopicId(null);
     if (!over) return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -59,7 +69,12 @@ export function PinnedTopicsSection({
   return (
     <section className="pinned-strip">
       <h2 className="section-label mb-2 text-amber-800/80">Pinned topics</h2>
-      <AppDndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <AppDndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           <div className="flex flex-col gap-y-1">
           {topics.map((topic) => (
@@ -85,6 +100,16 @@ export function PinnedTopicsSection({
           ))}
           </div>
         </SortableContext>
+
+        <AppDragOverlay>
+          {activeTopic ? (
+            <CollectionItemOverlay
+              text={activeTopic.text}
+              timestampIso={activeTopic.createdAtIso}
+              compact
+            />
+          ) : null}
+        </AppDragOverlay>
       </AppDndContext>
     </section>
   );

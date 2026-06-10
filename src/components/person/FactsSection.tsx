@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Channel, Fact, FactFolder } from "../../types";
 import { factDragId } from "../dnd/dndIds";
 import { factsLayoutStorageKey } from "../../lib/factFolders";
+import { CollectionItemOverlay } from "../dnd/CollectionItemOverlay";
 import { CollectionSection } from "../collection/CollectionSection";
 import { FactCollectionItem } from "../collection/FactCollectionItem";
 import { SortableFactItem } from "../collection/SortableFactItem";
@@ -137,7 +138,7 @@ export function FactsSection({
         )
       }
       renderDragOverlay={(fact) => (
-        <div className="rounded-lg bg-white/95 px-3 py-2 text-sm shadow-md ring-1 ring-sage/40">{fact.text}</div>
+        <CollectionItemOverlay text={fact.text} timestampIso={fact.recordedAtIso} />
       )}
     />
   );

@@ -1,5 +1,6 @@
-import { DragOverlay, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
+import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
+import { AppDragOverlay } from "../dnd/AppDragOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PeopleFolder, Person } from "../../types";
@@ -23,6 +24,7 @@ import {
 import { FolderPlusIcon } from "../ui/FolderPlusIcon";
 import { IconButton } from "../ui/IconButton";
 import { PeopleFolderSection } from "./PeopleFolderSection";
+import { PersonListRow } from "./PersonListRow";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
 
 export function FriendsSection({
@@ -225,13 +227,9 @@ export function FriendsSection({
             {folderList}
           </SortableContext>
 
-          <DragOverlay dropAnimation={null}>
-            {activePerson ? (
-              <div className="card px-4 py-3">
-                <span className="text-[0.9375rem] font-medium text-ink">{activePerson.displayName}</span>
-              </div>
-            ) : null}
-          </DragOverlay>
+          <AppDragOverlay>
+            {activePerson ? <PersonListRow person={activePerson} overlay /> : null}
+          </AppDragOverlay>
         </AppDndContext>
       ) : (
         folderList
