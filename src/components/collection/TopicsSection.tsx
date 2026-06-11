@@ -5,7 +5,6 @@ import { topicsLayoutStorageKey } from "../../lib/topicFolders";
 import { isTopicSortId, topicSortId } from "../dnd/dndIds";
 import { RowMenu } from "../ui/RowMenu";
 import { SectionAddLink } from "../ui/SectionAddLink";
-import { CollectionItemOverlay } from "../dnd/CollectionItemOverlay";
 import { CollectionSection } from "./CollectionSection";
 import { SortableTopicItem } from "./SortableTopicItem";
 import { TopicCollectionItem } from "./TopicCollectionItem";
@@ -178,9 +177,6 @@ export function TopicsSection({
           renderTopicItem(topic, Boolean(archived))
         )
       }
-      renderDragOverlay={(topic) => (
-        <CollectionItemOverlay text={topic.text} timestampIso={topic.createdAtIso} />
-      )}
     />
   );
 }

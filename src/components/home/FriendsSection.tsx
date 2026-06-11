@@ -1,6 +1,5 @@
 import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
-import { AppDragOverlay } from "../dnd/AppDragOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PeopleFolder, Person } from "../../types";
@@ -24,7 +23,6 @@ import {
 import { FolderPlusIcon } from "../ui/FolderPlusIcon";
 import { IconButton } from "../ui/IconButton";
 import { PeopleFolderSection } from "./PeopleFolderSection";
-import { PersonListRow } from "./PersonListRow";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
 
 export function FriendsSection({
@@ -87,8 +85,6 @@ export function FriendsSection({
     }
     wasUnsortedVisibleRef.current = unsortedVisible;
   }, [unsortedVisible, folders, sortable]);
-
-  const activePerson = activePersonKey ? people.find((p) => p.nameKey === activePersonKey) : null;
 
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
@@ -226,10 +222,6 @@ export function FriendsSection({
           <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
             {folderList}
           </SortableContext>
-
-          <AppDragOverlay>
-            {activePerson ? <PersonListRow person={activePerson} overlay /> : null}
-          </AppDragOverlay>
         </AppDndContext>
       ) : (
         folderList

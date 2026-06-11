@@ -1,6 +1,5 @@
 import { closestCenter, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { AppDndContext } from "../dnd/AppDndContext";
-import { AppDragOverlay } from "../dnd/AppDragOverlay";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { BaseFolder } from "../../lib/folders";
@@ -31,7 +30,6 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   features,
   addForm,
   renderItem,
-  renderDragOverlay,
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -60,7 +58,6 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   showArchivedItems?: boolean;
   headerMenu?: ReactNode;
   headerBanner?: ReactNode;
-  renderDragOverlay?: (activeItem: TItem) => ReactNode;
   onAddFolder?: (name: string) => void;
   onRenameFolder?: (folderId: string, name: string) => void;
   onDeleteFolder?: (folderId: string) => void;
@@ -120,7 +117,6 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
   const resolveItemId = itemIdFromDragId ?? ((dragId: string) => dragId.slice("fact:".length));
   const resolveItemDragId =
     getItemDragId ?? ((item: TItem) => (itemIdFromDragId ? itemIdFromDragId(item.id) : `fact:${item.id}`));
-  const activeItem = activeItemId ? items.find((item) => item.id === activeItemId) : null;
   const canSortItems = Boolean(features.dragItems && onReorderItems);
 
   const archivedByFolder = useMemo(() => {
@@ -268,10 +264,6 @@ export function CollectionSection<TItem extends { id: string; folderId?: string 
           );
         })}
       </SortableContext>
-
-      <AppDragOverlay>
-        {activeItem && renderDragOverlay ? renderDragOverlay(activeItem) : null}
-      </AppDragOverlay>
     </AppDndContext>
   ) : (
     items.map((item) => <div key={item.id}>{renderItem(item, { draggable: false, sortable: false })}</div>)
