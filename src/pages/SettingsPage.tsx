@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ImportConflictDialog } from "../components/settings/ImportConflictDialog";
+import { AppLogPanel } from "../components/settings/AppLogPanel";
 import {
   buildExportPayload,
   downloadJson,
@@ -8,6 +9,7 @@ import {
   serializeExportPayload,
 } from "../domain/importExport";
 import { copyTextToClipboard } from "../lib/clipboard";
+import { formatBuildTime } from "../lib/buildInfo";
 import * as repo from "../storage/repository";
 import { useAppStore } from "../store/appStore";
 import { useToastStore } from "../store/toastStore";
@@ -28,6 +30,7 @@ export function SettingsPage() {
   const [resolutions, setResolutions] = useState<Map<string, ImportConflictResolution>>(new Map());
   const [pendingImport, setPendingImport] = useState<PersonBundle[] | null>(null);
   const [pendingImportFolders, setPendingImportFolders] = useState<PeopleFolder[]>([]);
+  const [logsOpen, setLogsOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -146,6 +149,7 @@ export function SettingsPage() {
         ← My people
       </Link>
       <h1 className="mt-5 font-display text-[1.75rem] font-normal text-ink sm:text-3xl">Settings</h1>
+      <p className="mt-2 text-xs text-ink-muted">Build {formatBuildTime()}</p>
 
       <section className="card-padded mt-8">
         <h2 className="section-title">Export</h2>
@@ -166,7 +170,7 @@ export function SettingsPage() {
             Clear
           </button>
         </div>
-        <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg bg-white/50 ring-1 ring-stone-200/60">
+        <ul className="mt-2 max-h-[170px] overflow-y-auto rounded-lg bg-white/50 ring-1 ring-stone-200/60">
           {people.map((p) => (
             <li key={p.nameKey} className="flex items-center gap-3 border-b border-stone-100 px-4 py-3 last:border-0">
               <input
@@ -211,7 +215,7 @@ export function SettingsPage() {
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
           placeholder='{"schemaVersion":1,"people":[...]}'
-          rows={5}
+          rows={3}
           spellCheck={false}
           className="input mt-4 min-h-0 w-full resize-y py-2.5 font-mono text-xs leading-relaxed"
         />
@@ -229,6 +233,17 @@ export function SettingsPage() {
             Choose file…
           </button>
         </div>
+      </section>
+
+      <section className="mt-5">
+        <button
+          type="button"
+          onClick={() => setLogsOpen((open) => !open)}
+          className="btn-ghost btn-compact"
+        >
+          {logsOpen ? "Hide logs" : "Show logs"}
+        </button>
+        {logsOpen && <AppLogPanel />}
       </section>
 
       {conflicts.length > 0 && conflictIndex < conflicts.length && (
