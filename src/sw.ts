@@ -7,4 +7,13 @@ declare let self: ServiceWorkerGlobalScope;
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
-registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html")));
+const indexUrl = `${import.meta.env.BASE_URL}index.html`.replace(/\/{2,}/g, "/");
+registerRoute(new NavigationRoute(createHandlerBoundToURL(indexUrl)));
+
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});

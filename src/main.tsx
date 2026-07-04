@@ -7,7 +7,19 @@ import "./index.css";
 
 installAppLogCapture();
 
-registerSW({ immediate: true });
+let refreshing = false;
+navigator.serviceWorker?.addEventListener("controllerchange", () => {
+  if (refreshing) return;
+  refreshing = true;
+  window.location.reload();
+});
+
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    window.location.reload();
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
