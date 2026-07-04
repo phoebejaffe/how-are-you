@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { validateRename } from "../domain/personRename";
-import { findImportConflicts, mergePersonBundles, parseExportPayload } from "../domain/importExport";
+import { findImportConflicts, mergePersonBundles, parseExportText } from "../domain/importExport";
 import {
   clearPersistedUndo,
   createUndoAction,
@@ -112,6 +112,11 @@ interface AppState {
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
   exportSelected: (selectedKeys: string[]) => void;
+  importData: (text: string) => Promise<{
+    newPeople: PersonBundle[];
+    conflicts: ReturnType<typeof findImportConflicts>;
+    peopleFolders: PeopleFolder[];
+  }>;
   importFile: (file: File) => Promise<{
     newPeople: PersonBundle[];
     conflicts: ReturnType<typeof findImportConflicts>;
@@ -1148,15 +1153,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Export is handled in SettingsPage via repository for completeness.
   },
 
-  async importFile(file) {
-    const text = await file.text();
-    const payload = parseExportPayload(JSON.parse(text));
+  async importData(text) {
+    const payload = parseExportText(text);
     const existing = await repo.listAllBundles();
     const existingKeys = new Set(existing.map((b) => b.person.nameKey));
     const conflicts = findImportConflicts(payload.people, existing);
     const conflictKeys = new Set(conflicts.map((c) => c.imported.person.nameKey));
     const newPeople = payload.people.filter((p) => !existingKeys.has(p.person.nameKey) && !conflictKeys.has(p.person.nameKey));
     return { newPeople, conflicts, peopleFolders: payload.peopleFolders ?? [] };
+  },
+
+  async importFile(file) {
+    return get().importData(await file.text());
   },
 
   async applyImportResolutions(importedPeople, resolutions, peopleFolders = []) {

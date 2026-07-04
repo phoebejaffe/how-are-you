@@ -4,6 +4,8 @@ import {
   findImportConflicts,
   mergePersonBundles,
   parseExportPayload,
+  parseExportText,
+  serializeExportPayload,
 } from "./importExport";
 import type { PersonBundle } from "../types";
 
@@ -44,6 +46,14 @@ describe("importExport", () => {
     const payload = buildExportPayload([bundle], ["Alex"]);
     const parsed = parseExportPayload(payload);
     expect(parsed.people[0].person.displayName).toBe("Alex");
+  });
+
+  it("parses export text and rejects empty input", () => {
+    const bundle = makeBundle("Alex");
+    const text = serializeExportPayload(buildExportPayload([bundle], ["Alex"]));
+    expect(parseExportText(text).people).toHaveLength(1);
+    expect(() => parseExportText("   ")).toThrow("Paste export JSON");
+    expect(() => parseExportText("{")).toThrow("Invalid JSON");
   });
 
   it("finds import conflicts by name key", () => {

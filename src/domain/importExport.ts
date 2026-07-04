@@ -6,18 +6,48 @@ import type {
   ExportPayload,
   ImportConflict,
   ImportConflictResolution,
+  PeopleFolder,
   PersonBundle,
 } from "../types";
 
 export const EXPORT_SCHEMA_VERSION = 1 as const;
 
-export function buildExportPayload(bundles: PersonBundle[], selectedKeys: string[]): ExportPayload {
+export function buildExportPayload(
+  bundles: PersonBundle[],
+  selectedKeys: string[],
+  peopleFolders: PeopleFolder[] = [],
+): ExportPayload {
   const keySet = new Set(selectedKeys);
   return {
     schemaVersion: EXPORT_SCHEMA_VERSION,
     exportedAtIso: new Date().toISOString(),
     people: bundles.filter((b) => keySet.has(b.person.nameKey)),
+    peopleFolders,
   };
+}
+
+export function serializeExportPayload(payload: ExportPayload): string {
+  return JSON.stringify(payload, null, 2);
+}
+
+export function exportFilename(date = new Date()): string {
+  return `how-are-you-export-${date.toISOString().slice(0, 10)}.json`;
+}
+
+export function parseExportText(text: string): ExportPayload {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error("Paste export JSON or choose a file.");
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(trimmed);
+  } catch {
+    throw new Error("Invalid JSON.");
+  }
+
+  return parseExportPayload(raw);
 }
 
 export function parseExportPayload(raw: unknown): ExportPayload {
