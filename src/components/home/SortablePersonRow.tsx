@@ -13,7 +13,7 @@ export function SortablePersonRow({
   onDelete?: () => void;
   sortable?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, isDragging } =
     useSortable({
       id: personDragId(person.nameKey),
       data: {
@@ -25,8 +25,7 @@ export function SortablePersonRow({
     });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
+    transform: CSS.Translate.toString(transform),
   };
 
   if (!sortable) {
@@ -37,6 +36,7 @@ export function SortablePersonRow({
     <div
       ref={setNodeRef}
       style={style}
+      data-person-drag-row=""
       className={isDragging ? "pointer-events-none opacity-0" : ""}
     >
       <PersonListRow

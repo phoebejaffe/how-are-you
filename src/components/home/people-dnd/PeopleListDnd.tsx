@@ -5,7 +5,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { AppDndContext } from "../../dnd/AppDndContext";
 import {
   folderIdFromDropId,
@@ -21,11 +21,30 @@ import type { PeopleFolder, Person } from "../../../types";
 import { peopleListCollisionDetection } from "./collisionDetection";
 import { PersonDragPreview, type DragPreviewPosition } from "./PersonDragPreview";
 
-type DragStartSnapshot = {
+function resolveOverId(over: DragEndEvent["over"], collisions: DragEndEvent["collisions"]): string | null {
+  if (over) return String(over.id);
+  const hit = collisions?.[0];
+  return hit ? String(hit.id) : null;
+}
+
+function measurePersonDragRect(event: DragStartEvent): DragRectSnapshot | null {
+  const measured = event.active.rect.current?.initial ?? event.active.rect.current?.translated;
+  if (measured) {
+    return { left: measured.left, top: measured.top, width: measured.width };
+  }
+
+  const target = event.activatorEvent.target;
+  if (!(target instanceof Element)) return null;
+  const row = target.closest("[data-person-drag-row]");
+  const rect = row?.getBoundingClientRect();
+  if (!rect) return null;
+  return { left: rect.left, top: rect.top, width: rect.width };
+}
+
+type DragRectSnapshot = {
   left: number;
   top: number;
   width: number;
-  scrollY: number;
 };
 
 export function PeopleListDnd({
@@ -56,7 +75,7 @@ export function PeopleListDnd({
   const [previewPosition, setPreviewPosition] = useState<DragPreviewPosition | null>(null);
   const [previewLayoutOrder, setPreviewLayoutOrder] = useState<string[] | null>(null);
 
-  const dragSnapshotRef = useRef<DragStartSnapshot | null>(null);
+  const dragRectRef = useRef<DragRectSnapshot | null>(null);
   const dragDeltaRef = useRef({ x: 0, y: 0 });
 
   const layoutOrder = useMemo(
@@ -75,54 +94,40 @@ export function PeopleListDnd({
   );
 
   function updatePreviewPosition() {
-    const start = dragSnapshotRef.current;
+    const start = dragRectRef.current;
     if (!start) return;
-    const scrollDelta = window.scrollY - start.scrollY;
     setPreviewPosition({
       x: start.left + dragDeltaRef.current.x,
-      y: start.top + dragDeltaRef.current.y + scrollDelta,
+      y: start.top + dragDeltaRef.current.y,
       width: start.width,
     });
   }
 
-  function resetDrag() {
+  function clearPersonDrag() {
     setActivePersonKey(null);
     setPreviewPosition(null);
-    setPreviewLayoutOrder(null);
-    dragSnapshotRef.current = null;
+    dragRectRef.current = null;
     dragDeltaRef.current = { x: 0, y: 0 };
     onHighlightFolder(undefined);
     onPersonDragChange(false);
   }
 
-  useEffect(() => {
-    if (!activePersonKey) return;
-    const onScroll = () => updatePreviewPosition();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [activePersonKey]);
-
   function handleDragStart(event: DragStartEvent) {
     const id = String(event.active.id);
     if (!isPersonDragId(id)) return;
 
-    const rect = event.active.rect.current?.initial;
-    if (!rect) return;
+    const start = measurePersonDragRect(event);
+    if (!start) return;
 
-    dragSnapshotRef.current = {
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      scrollY: window.scrollY,
-    };
+    dragRectRef.current = start;
     dragDeltaRef.current = { x: 0, y: 0 };
     setActivePersonKey(id.slice("person:".length));
     onPersonDragChange(true);
-    setPreviewPosition({ x: rect.left, y: rect.top, width: rect.width });
+    setPreviewPosition({ x: start.left, y: start.top, width: start.width });
   }
 
   function handleDragMove(event: DragMoveEvent) {
-    if (!dragSnapshotRef.current) return;
+    if (!dragRectRef.current) return;
     dragDeltaRef.current = event.delta;
     updatePreviewPosition();
   }
@@ -171,7 +176,7 @@ export function PeopleListDnd({
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
+    const { active, over, collisions } = event;
     const activeId = String(active.id);
 
     if (isFolderSortId(activeId)) {
@@ -179,39 +184,48 @@ export function PeopleListDnd({
         onApplyLayoutOrder(previewLayoutOrder);
         onFolderReorderDone();
       }
-      resetDrag();
+      setPreviewLayoutOrder(null);
+      clearPersonDrag();
       return;
     }
 
-    const personKey = activePersonKey;
-    resetDrag();
+    if (!isPersonDragId(activeId)) {
+      clearPersonDrag();
+      return;
+    }
 
-    if (!over || !personKey) return;
-    const overId = String(over.id);
+    const personKey = activeId.slice("person:".length);
+    const overId = resolveOverId(over, collisions);
+    clearPersonDrag();
 
-    if (isPersonDragId(activeId) && isPersonDragId(overId) && activeId !== overId) {
+    if (!overId) return;
+
+    if (isPersonDragId(overId) && overId !== activeId) {
       onDropPersonOnPerson(personKey, overId.slice("person:".length));
       return;
     }
 
-    if (isPersonDragId(activeId)) {
-      let targetFolderId: string | null | undefined;
+    let targetFolderId: string | null | undefined;
 
-      if (isFolderDropId(overId)) {
-        targetFolderId = folderIdFromDropId(overId);
-      } else if (isFolderSortId(overId)) {
-        const folderId = folderIdFromSortId(overId);
-        targetFolderId = folderId === UNSORTED_DROP_ID ? null : folderId;
-      }
+    if (isFolderDropId(overId)) {
+      targetFolderId = folderIdFromDropId(overId);
+    } else if (isFolderSortId(overId)) {
+      const folderId = folderIdFromSortId(overId);
+      targetFolderId = folderId === UNSORTED_DROP_ID ? null : folderId;
+    }
 
-      if (targetFolderId !== undefined) {
-        const person = people.find((entry) => entry.nameKey === personKey);
-        const currentFolderId = person?.folderId ?? null;
-        if (person && currentFolderId !== targetFolderId) {
-          onMovePersonToFolder(personKey, targetFolderId);
-        }
+    if (targetFolderId !== undefined) {
+      const person = people.find((entry) => entry.nameKey === personKey);
+      const currentFolderId = person?.folderId ?? null;
+      if (person && currentFolderId !== targetFolderId) {
+        onMovePersonToFolder(personKey, targetFolderId);
       }
     }
+  }
+
+  function handleDragCancel() {
+    setPreviewLayoutOrder(null);
+    clearPersonDrag();
   }
 
   return (
@@ -222,7 +236,7 @@ export function PeopleListDnd({
       onDragMove={handleDragMove}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={resetDrag}
+      onDragCancel={handleDragCancel}
     >
       <SortableContext items={folderSortableIds} strategy={verticalListSortingStrategy}>
         {children(layoutOrder)}

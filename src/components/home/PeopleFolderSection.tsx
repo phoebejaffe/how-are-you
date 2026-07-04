@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { PeopleFolder, Person } from "../../types";
 import { sortPeopleInFolder } from "../../lib/personOrder";
 import { folderDropId, folderSortId, personDragId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
+import { mergeRefs } from "../dnd/mergeRefs";
 import { FolderHeader } from "../folders/FolderHeader";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { SortablePersonRow } from "./SortablePersonRow";
@@ -45,15 +46,16 @@ export function PeopleFolderSection({
   });
 
   const sortStyle = {
-    transform: CSS.Transform.toString(folderSortable.transform),
-    transition: folderSortable.transition,
+    transform: CSS.Translate.toString(folderSortable.transform),
   };
 
   return (
     <div
-      ref={folderSortable.setNodeRef}
+      ref={mergeRefs(folderSortable.setNodeRef, droppable.setNodeRef)}
       style={sortStyle}
-      className={`folder-card px-0.5 py-0.5 transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""}`}
+      className={`folder-card rounded-md px-0.5 py-0.5 transition-shadow ${
+        folderSortable.isDragging ? "opacity-40" : ""
+      } ${highlightDropTarget ? "ring-2 ring-sage/50" : ""}`}
     >
       <FolderHeader
         name={folder.name}
@@ -71,12 +73,7 @@ export function PeopleFolderSection({
         showBottomBorder={!folder.collapsed}
       />
 
-      <div
-        ref={droppable.setNodeRef}
-        className={`rounded-md transition-shadow ${highlightDropTarget ? "ring-2 ring-sage/50" : ""} ${
-          folder.collapsed && people.length === 0 ? "min-h-11" : ""
-        }`}
-      >
+      <div className={folder.collapsed ? "min-h-11" : ""}>
         {!folder.collapsed && (
           <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
             <ul className="list-divider pb-0.5">
