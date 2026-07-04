@@ -1,25 +1,70 @@
 import type { RowMenuItem } from "../components/ui/RowMenu";
 import { useToastStore } from "../store/toastStore";
 
-export async function copyTextToClipboard(text: string): Promise<boolean> {
+function fallbackCopyText(text: string): boolean {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "0";
+  textarea.style.left = "0";
+  textarea.style.width = "1px";
+  textarea.style.height = "1px";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  document.body.appendChild(textarea);
+
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, text.length);
+
+  let ok = false;
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
+    ok = document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
+  return ok;
+}
+
+async function copyResolvedText(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
     try {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(textarea);
-      return ok;
+      await navigator.clipboard.writeText(text);
+      return true;
     } catch {
-      return false;
+      // fall through to execCommand
     }
   }
+  return fallbackCopyText(text);
+}
+
+async function copyTextPromise(textPromise: Promise<string>): Promise<boolean> {
+  if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/plain": textPromise.then((text) => new Blob([text], { type: "text/plain" })),
+        }),
+      ]);
+      return true;
+    } catch {
+      // fall through once data is ready
+    }
+  }
+
+  try {
+    return copyResolvedText(await textPromise);
+  } catch {
+    return false;
+  }
+}
+
+export async function copyTextToClipboard(text: string | Promise<string>): Promise<boolean> {
+  if (typeof text === "string") {
+    return copyResolvedText(text);
+  }
+  return copyTextPromise(text);
 }
 
 export function copyToClipboardWithToast(text: string): void {

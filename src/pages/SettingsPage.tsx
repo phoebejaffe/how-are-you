@@ -69,10 +69,11 @@ export function SettingsPage() {
     downloadJson(exportFilename(), payload);
   }
 
-  async function handleExportToClipboard() {
-    const payload = await buildSelectedExportPayload();
-    const ok = await copyTextToClipboard(serializeExportPayload(payload));
-    addToast(ok ? "Copied export to clipboard" : "Could not copy to clipboard", ok ? "success" : "error");
+  function handleExportToClipboard() {
+    const textPromise = buildSelectedExportPayload().then(serializeExportPayload);
+    void copyTextToClipboard(textPromise).then((ok) => {
+      addToast(ok ? "Copied export to clipboard" : "Could not copy to clipboard", ok ? "success" : "error");
+    });
   }
 
   async function startImport(text: string) {
@@ -193,7 +194,7 @@ export function SettingsPage() {
           <button
             type="button"
             disabled={exportDisabled}
-            onClick={() => void handleExportToClipboard()}
+            onClick={() => handleExportToClipboard()}
             className="btn-secondary btn-compact disabled:opacity-40"
           >
             Copy to clipboard
