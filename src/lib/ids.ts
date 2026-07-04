@@ -8,6 +8,15 @@ export function personNameKey(displayName: string): string {
   return displayName.trim();
 }
 
+export function normalizePersonDisplayName(displayName: string): string {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase() + part.slice(1).toLocaleLowerCase())
+    .join(" ");
+}
+
 export function normalizePersonNameForComparison(name: string): string {
   return name.trim().toLocaleLowerCase();
 }

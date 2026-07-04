@@ -17,6 +17,7 @@ import {
   resolveFactsLayoutOrder,
   saveFactsLayoutOrder,
 } from "../lib/factFolders";
+import { sanitizePersonContext } from "../lib/personContext";
 import { nextSortOrderForPerson, peopleAfterReorder } from "../lib/personOrder";
 import {
   foldersFromLayoutOrder as topicFoldersFromLayoutOrder,
@@ -31,7 +32,7 @@ import {
 } from "../lib/peopleFolders";
 import { setTopicFollowUpsCollapsed } from "../lib/topicFollowUpCollapse";
 import { nextSortOrderForTopic, pinnedTopicsAfterReorder, topicsAfterReorder } from "../lib/topicOrder";
-import { createId, nowIso, personNameKey, personNameKeysMatch } from "../lib/ids";
+import { createId, nowIso, normalizePersonDisplayName, personNameKey, personNameKeysMatch } from "../lib/ids";
 import * as repo from "../storage/repository";
 import type {
   ActivityType,
@@ -63,7 +64,7 @@ interface AppState {
   hydrate: () => Promise<void>;
   refreshPeople: () => Promise<void>;
   loadBundle: (nameKey: string) => Promise<PersonBundle | null>;
-  addPerson: (displayName: string) => Promise<void>;
+  addPerson: (displayName: string, context?: string) => Promise<void>;
   renamePerson: (oldKey: string, newDisplayName: string) => Promise<string>;
   scheduleDeletePerson: (nameKey: string) => Promise<void>;
   addTopic: (nameKey: string, text: string, channel: Channel, folderId?: string) => Promise<void>;
@@ -230,38 +231,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     return bundle;
   },
 
-  async addPerson(displayName) {
-    const key = personNameKey(displayName);
+  async addPerson(displayName, context) {
+    const trimmed = normalizePersonDisplayName(displayName);
+    const key = personNameKey(trimmed);
     if (!key) throw new Error("Name cannot be empty.");
     if (get().people.some((p) => personNameKeysMatch(p.nameKey, key))) {
-      throw new Error(`Someone named "${displayName.trim()}" already exists.`);
+      throw new Error(`Someone named "${trimmed}" already exists.`);
     }
     const now = nowIso();
-    const person: Person = { nameKey: key, displayName: displayName.trim(), createdAtIso: now, updatedAtIso: now };
+    const savedContext = sanitizePersonContext(context);
+    const person: Person = {
+      nameKey: key,
+      displayName: trimmed,
+      createdAtIso: now,
+      updatedAtIso: now,
+      ...(savedContext ? { context: savedContext } : {}),
+    };
     await repo.savePerson(person);
     await get().refreshPeople();
     await get().loadBundle(key);
   },
 
   async renamePerson(oldKey, newDisplayName) {
-    const result = validateRename(get().people, oldKey, newDisplayName);
+    const trimmed = normalizePersonDisplayName(newDisplayName);
+    const result = validateRename(get().people, oldKey, trimmed);
     if (!result.ok) throw new Error(result.error);
     if (result.newKey === oldKey) {
       const bundle = get().bundles[oldKey];
       if (!bundle) return oldKey;
-      const person = { ...bundle.person, displayName: newDisplayName.trim(), updatedAtIso: nowIso() };
+      const person = { ...bundle.person, displayName: trimmed, updatedAtIso: nowIso() };
       await repo.savePerson(person);
       await get().loadBundle(oldKey);
       await get().refreshPeople();
       return oldKey;
     }
-    await repo.renamePerson(oldKey, result.newKey, newDisplayName.trim());
+    await repo.renamePerson(oldKey, result.newKey, trimmed);
     set((state) => {
       const nextBundles = { ...state.bundles };
       if (nextBundles[oldKey]) {
         nextBundles[result.newKey] = {
           ...nextBundles[oldKey],
-          person: { ...nextBundles[oldKey].person, nameKey: result.newKey, displayName: newDisplayName.trim() },
+          person: { ...nextBundles[oldKey].person, nameKey: result.newKey, displayName: trimmed },
           topics: nextBundles[oldKey].topics.map((t) => ({ ...t, personNameKey: result.newKey })),
           facts: nextBundles[oldKey].facts.map((f) => ({ ...f, personNameKey: result.newKey })),
           factFolders: (nextBundles[oldKey].factFolders ?? []).map((f) => ({ ...f, personNameKey: result.newKey })),

@@ -90,7 +90,7 @@ export function PeopleFolderSection({
       <ConfirmDialog
         open={confirmDelete}
         title="Delete folder?"
-        message="Friends in this folder will be moved to Unsorted, not deleted."
+        message="People in this folder will be moved to Unsorted, not deleted."
         onConfirm={() => {
           setConfirmDelete(false);
           onDelete();

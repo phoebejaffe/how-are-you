@@ -22,6 +22,7 @@ import {
 } from "../../lib/peopleFolders";
 import { FolderPlusIcon } from "../ui/FolderPlusIcon";
 import { IconButton } from "../ui/IconButton";
+import { PersonPlusIcon } from "../ui/PersonPlusIcon";
 import { AddPersonDialog } from "./AddPersonDialog";
 import { PeopleFolderSection } from "./PeopleFolderSection";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
@@ -46,7 +47,7 @@ export function FriendsSection({
   onDeletePerson: (nameKey: string) => void;
   onMovePersonToFolder: (nameKey: string, folderId: string | null) => void;
   onDropPersonOnPerson: (draggedKey: string, targetKey: string) => void;
-  onAddPerson: (name: string) => Promise<void>;
+  onAddPerson: (name: string, context?: string) => Promise<void>;
   onAddFolder: (name: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -170,10 +171,10 @@ export function FriendsSection({
   return (
     <section>
       <div className="section-header">
-        <h2 className="section-title">Friends</h2>
+        <h2 className="section-title">My people</h2>
         <div className="ml-auto flex items-center gap-1">
-          <IconButton onClick={() => setAddingPerson(true)} aria-label="Add friend">
-            👤+
+          <IconButton onClick={() => setAddingPerson(true)} aria-label="Add person">
+            <PersonPlusIcon />
           </IconButton>
           {!addingFolder && (
             <IconButton onClick={() => setAddingFolder(true)} aria-label="New folder">
@@ -219,7 +220,7 @@ export function FriendsSection({
         </form>
       )}
 
-      {!hasAnyPeople && <p className="empty-state">No friends yet — tap 👤+ to add someone.</p>}
+      {!hasAnyPeople && <p className="empty-state">No people yet — tap the add person button to get started.</p>}
 
       {sortable ? (
         <AppDndContext

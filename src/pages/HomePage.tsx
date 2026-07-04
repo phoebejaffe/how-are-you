@@ -49,7 +49,7 @@ export function HomePage() {
           <h1 className="font-display text-[1.75rem] font-normal leading-tight text-ink sm:text-3xl">
             How Are You
           </h1>
-          <p className="mt-1.5 text-[0.9375rem] text-ink-muted">Remember what to ask your friends</p>
+          <p className="mt-1.5 text-[0.9375rem] text-ink-muted">Remember what to ask your people</p>
         </div>
         <Link to="/settings" className="btn-ghost btn-compact mt-1">
           Settings
@@ -63,7 +63,7 @@ export function HomePage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search friends, topics, and facts…"
+          placeholder="Search people, topics, and facts…"
           className="input"
         />
       </div>

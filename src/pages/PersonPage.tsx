@@ -7,7 +7,7 @@ import { PersonLocationsSection } from "../components/person/PersonLocationsSect
 import { PinnedFactsSection } from "../components/person/PinnedFactsSection";
 import { CheckIcon } from "../components/ui/CheckIcon";
 import { RowMenu } from "../components/ui/RowMenu";
-import { findPersonKey } from "../lib/ids";
+import { findPersonKey, normalizePersonDisplayName } from "../lib/ids";
 import { sortPinnedFacts } from "../lib/factOrder";
 import { computeTimeCluster } from "../lib/timeCluster";
 import { sortPinnedTopics, sortUnpinnedTopics } from "../lib/topicOrder";
@@ -26,6 +26,7 @@ export function PersonPage() {
     [people, nameKey],
   );
   const bundle = useAppStore((s) => s.bundles[resolvedKey ?? ""]);
+  const pageKey = resolvedKey ?? nameKey;
   const pendingTopicDeletes = useAppStore((s) => s.pendingTopicDeletes);
   const pendingFactDeletes = useAppStore((s) => s.pendingFactDeletes);
   const pendingFollowUpDeletes = useAppStore((s) => s.pendingFollowUpDeletes);
@@ -115,8 +116,20 @@ export function PersonPage() {
   }, []);
 
   useEffect(() => {
-    if (bundle) setNameInput(bundle.person.displayName);
+    if (!bundle) return;
+    setNameInput(normalizePersonDisplayName(bundle.person.displayName));
   }, [bundle]);
+
+  useEffect(() => {
+    if (!bundle || !pageKey) return;
+    const normalized = normalizePersonDisplayName(bundle.person.displayName);
+    if (normalized === bundle.person.displayName) return;
+    void renamePerson(pageKey, normalized).then((newKey) => {
+      if (newKey !== pageKey) {
+        navigate(`/person/${encodeURIComponent(newKey)}`, { replace: true });
+      }
+    });
+  }, [bundle, pageKey, renamePerson, navigate]);
 
   const visibleTopics = useMemo(() => {
     if (!bundle) return { pinned: [], unpinned: [], archived: [] };
@@ -139,13 +152,11 @@ export function PersonPage() {
     };
   }, [bundle, pendingFactDeletes]);
 
-  const pageKey = resolvedKey ?? nameKey;
-
   if (!ready || (nameKey && resolvedKey === nameKey && !bundleLoaded)) {
     return (
       <div className="page page-enter">
         <Link to="/" className="back-link">
-          ← Friends
+          ← My people
         </Link>
         <p className="mt-6 text-sm text-ink-muted">Loading…</p>
       </div>
@@ -156,11 +167,11 @@ export function PersonPage() {
     return (
       <div className="page page-enter">
         <Link to="/" className="back-link">
-          ← Friends
+          ← My people
         </Link>
         <h1 className="mt-5 font-display text-[1.75rem] font-normal text-ink">Person not found</h1>
         <p className="mt-2 text-sm text-ink-muted">
-          This friend may have been deleted, or the link might be wrong.
+          This person may have been deleted, or the link might be wrong.
         </p>
       </div>
     );
@@ -184,7 +195,7 @@ export function PersonPage() {
   return (
     <div className="page page-enter">
       <Link to="/" className="back-link">
-        ← Friends
+        ← My people
       </Link>
 
       <header className="mt-5 mb-6">
@@ -203,7 +214,7 @@ export function PersonPage() {
               type="button"
               onClick={() => {
                 setEditingName(false);
-                setNameInput(bundle.person.displayName);
+                setNameInput(normalizePersonDisplayName(bundle.person.displayName));
               }}
               aria-label="Cancel"
               className="btn-ghost btn-compact min-w-11 px-3"
@@ -214,7 +225,7 @@ export function PersonPage() {
         ) : (
           <div className="flex items-center gap-1">
             <h1 className="min-w-0 flex-1 font-display text-[1.75rem] font-normal leading-tight text-ink sm:text-3xl">
-              {bundle.person.displayName}
+              {normalizePersonDisplayName(bundle.person.displayName)}
             </h1>
             <RowMenu items={[{ label: "Rename", onClick: () => setEditingName(true) }]} />
           </div>

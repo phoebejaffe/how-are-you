@@ -152,12 +152,12 @@
   }
 
   .nearby-strip {
-    @apply relative mb-6 rounded-2xl;
+    @apply relative mb-4 rounded-xl;
     animation: nearby-ring-glow 30s linear infinite;
   }
 
   .nearby-strip-blobs {
-    @apply pointer-events-none absolute inset-0 overflow-hidden rounded-2xl;
+    @apply pointer-events-none absolute inset-0 overflow-hidden rounded-xl;
     z-index: 0;
     background: linear-gradient(
       90deg,
@@ -201,11 +201,11 @@
   }
 
   .nearby-strip-content {
-    @apply relative z-[1] px-4 py-4 sm:px-5 sm:py-5;
+    @apply relative z-[1] px-3.5 py-3 sm:px-4 sm:py-3.5;
   }
 
   .nearby-strip-title {
-    @apply font-display text-[1.35rem] leading-none tracking-tight text-bi-purple;
+    @apply font-display text-[1.2rem] leading-none tracking-tight text-bi-purple;
   }
 
   .list-divider > * + * {

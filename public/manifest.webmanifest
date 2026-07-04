@@ -1,7 +1,7 @@
 {
   "name": "How Are You",
   "short_name": "How Are You",
-  "description": "Track conversation topics and facts for your friends.",
+  "description": "Track conversation topics and facts for your people.",
   "start_url": "/how-are-you/",
   "scope": "/how-are-you/",
   "display": "standalone",

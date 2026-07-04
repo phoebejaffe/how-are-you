@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { Person } from "../types";
-import { findPersonKey, personNameKey, personNameKeysMatch } from "./ids";
+import { findPersonKey, normalizePersonDisplayName, personNameKey, personNameKeysMatch } from "./ids";
 
 describe("personNameKey", () => {
   it("trims whitespace", () => {
     expect(personNameKey("  Alex  ")).toBe("Alex");
+  });
+});
+
+describe("normalizePersonDisplayName", () => {
+  it("title-cases each word", () => {
+    expect(normalizePersonDisplayName("  alex kim  ")).toBe("Alex Kim");
+    expect(normalizePersonDisplayName("ALEX")).toBe("Alex");
+  });
+
+  it("returns empty string for blank input", () => {
+    expect(normalizePersonDisplayName("   ")).toBe("");
   });
 });
 

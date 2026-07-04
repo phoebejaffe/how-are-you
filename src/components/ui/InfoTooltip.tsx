@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-const TOOLTIP_TEXT =
-  "Friends with a saved location within 500 feet of you.";
-
-export function InfoTooltip({ label = "More information" }: { label?: string }) {
+export function InfoTooltip({
+  label = "More information",
+  text = "People with a saved location within 500 feet of you.",
+}: {
+  label?: string;
+  text?: string;
+}) {
   const [visible, setVisible] = useState(false);
   const [style, setStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -60,7 +63,7 @@ export function InfoTooltip({ label = "More information" }: { label?: string }) 
         style={style}
         className="pointer-events-none w-52 rounded-lg bg-ink px-2.5 py-1.5 text-center font-sans text-[11px] font-normal normal-case tracking-normal text-cream shadow-md"
       >
-        {TOOLTIP_TEXT}
+        {text}
       </span>,
       document.body,
     );
@@ -72,7 +75,7 @@ export function InfoTooltip({ label = "More information" }: { label?: string }) 
         type="button"
         className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/80 font-sans text-[10px] font-semibold leading-none text-bi-purple ring-1 ring-bi-pink/35 transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-bi-blue/40"
         aria-label={label}
-        title={TOOLTIP_TEXT}
+        title={text}
         onMouseEnter={() => setVisible(true)}
         onMouseLeave={() => setVisible(false)}
         onFocus={() => setVisible(true)}

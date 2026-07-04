@@ -109,3 +109,59 @@ export function findNearbyPeople(
 
   return matches.sort((a, b) => a.distanceFeet - b.distanceFeet);
 }
+
+export interface NearbyLocationGroup {
+  key: string;
+  placeName: string;
+  latitude: number;
+  longitude: number;
+  distanceFeet: number;
+  matches: NearbyPersonMatch[];
+}
+
+function nearbyLocationKey(location: PersonLocation): string | null {
+  if (location.latitude == null || location.longitude == null) return null;
+  return `${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`;
+}
+
+export function groupNearbyPeopleByLocation(matches: NearbyPersonMatch[]): NearbyLocationGroup[] {
+  const groups = new Map<string, NearbyLocationGroup>();
+
+  for (const match of matches) {
+    const key = nearbyLocationKey(match.location);
+    if (!key) continue;
+
+    const existing = groups.get(key);
+    if (existing) {
+      const duplicatePerson = existing.matches.some((entry) => entry.person.nameKey === match.person.nameKey);
+      if (!duplicatePerson) existing.matches.push(match);
+      existing.distanceFeet = Math.min(existing.distanceFeet, match.distanceFeet);
+      if (match.location.name.length > existing.placeName.length) {
+        existing.placeName = match.location.name;
+      }
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      placeName: match.location.name,
+      latitude: match.location.latitude!,
+      longitude: match.location.longitude!,
+      distanceFeet: match.distanceFeet,
+      matches: [match],
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      matches: group.matches.sort(
+        (a, b) =>
+          a.distanceFeet - b.distanceFeet ||
+          a.person.displayName.localeCompare(b.person.displayName),
+      ),
+    }))
+    .sort(
+      (a, b) => a.distanceFeet - b.distanceFeet || a.placeName.localeCompare(b.placeName),
+    );
+}

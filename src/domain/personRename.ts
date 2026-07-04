@@ -1,12 +1,12 @@
 import type { Person } from "../types";
-import { personNameKey, personNameKeysMatch } from "../lib/ids";
+import { normalizePersonDisplayName, personNameKey, personNameKeysMatch } from "../lib/ids";
 
 export function validateRename(
   people: Person[],
   currentKey: string,
   newDisplayName: string,
 ): { ok: true; newKey: string } | { ok: false; error: string } {
-  const trimmed = newDisplayName.trim();
+  const trimmed = normalizePersonDisplayName(newDisplayName);
   if (!trimmed) {
     return { ok: false, error: "Name cannot be empty." };
   }

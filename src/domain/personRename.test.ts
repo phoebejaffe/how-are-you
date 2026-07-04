@@ -25,7 +25,7 @@ describe("validateRename", () => {
   it("rejects duplicate names case-insensitively", () => {
     expect(validateRename(people, "Alex Kim", "blair lee")).toEqual({
       ok: false,
-      error: 'Someone named "blair lee" already exists.',
+      error: 'Someone named "Blair Lee" already exists.',
     });
   });
 

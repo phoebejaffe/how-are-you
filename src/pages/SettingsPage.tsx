@@ -99,7 +99,7 @@ export function SettingsPage() {
   return (
     <div className="page page-enter">
       <Link to="/" className="back-link">
-        ← Friends
+        ← My people
       </Link>
       <h1 className="mt-5 font-display text-[1.75rem] font-normal text-ink sm:text-3xl">Settings</h1>
 

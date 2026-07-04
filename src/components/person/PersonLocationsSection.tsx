@@ -49,7 +49,7 @@ export function PersonLocationsSection({
           onClick={() => setEditing(true)}
           className="text-sm text-ink-muted transition-colors active:text-terracotta"
         >
-          + add locations
+          + Add locations
         </button>
       </section>
     );
@@ -124,7 +124,7 @@ export function PersonLocationsSection({
           onClick={() => setDrafts((current) => [...current, emptyDraft()])}
           className="text-sm text-ink-muted transition-colors active:text-terracotta"
         >
-          + add another
+            + Add another
         </button>
 
         <div className="flex gap-2.5 pt-1">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDistanceFeet, haversineMeters, METERS_PER_FOOT, NEARBY_RADIUS_FEET } from "./geo";
-import { findNearbyPeople, mergePersonLocations, normalizePersonLocations, sanitizePersonLocations } from "./personLocations";
+import { findNearbyPeople, groupNearbyPeopleByLocation, mergePersonLocations, normalizePersonLocations, sanitizePersonLocations } from "./personLocations";
 import type { Person } from "../types";
 
 describe("normalizePersonLocations", () => {
@@ -86,6 +86,69 @@ describe("findNearbyPeople", () => {
       user,
     );
     expect(matches).toEqual([]);
+  });
+});
+
+describe("groupNearbyPeopleByLocation", () => {
+  const user = { latitude: 40.758, longitude: -73.9855 };
+  const nearLat = user.latitude + 50 * METERS_PER_FOOT / 111_000;
+
+  const person = (overrides: Partial<Person> & Pick<Person, "nameKey" | "displayName">): Person => ({
+    createdAtIso: "2024-01-01",
+    updatedAtIso: "2024-01-01",
+    ...overrides,
+  });
+
+  it("groups people at the same coordinates under one place", () => {
+    const sharedLocation = { latitude: nearLat, longitude: user.longitude };
+    const matches = findNearbyPeople(
+      [
+        person({
+          nameKey: "alex",
+          displayName: "Alex",
+          locations: [{ id: "1", label: "Works", name: "Office", ...sharedLocation }],
+        }),
+        person({
+          nameKey: "sam",
+          displayName: "Sam",
+          locations: [{ id: "2", label: "Met", name: "Office HQ", ...sharedLocation }],
+        }),
+      ],
+      user,
+    );
+
+    const groups = groupNearbyPeopleByLocation(matches);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].matches).toHaveLength(2);
+    expect(groups[0].placeName).toBe("Office HQ");
+  });
+
+  it("keeps separate groups for different coordinates", () => {
+    const matches = findNearbyPeople(
+      [
+        person({
+          nameKey: "alex",
+          displayName: "Alex",
+          locations: [{ id: "1", label: "Works", name: "Office", latitude: nearLat, longitude: user.longitude }],
+        }),
+        person({
+          nameKey: "sam",
+          displayName: "Sam",
+          locations: [
+            {
+              id: "2",
+              label: "Met",
+              name: "Cafe",
+              latitude: nearLat + 0.001,
+              longitude: user.longitude,
+            },
+          ],
+        }),
+      ],
+      user,
+    );
+
+    expect(groupNearbyPeopleByLocation(matches)).toHaveLength(2);
   });
 });
 
