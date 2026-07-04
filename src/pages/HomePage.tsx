@@ -51,9 +51,14 @@ export function HomePage() {
           </h1>
           <p className="mt-1.5 text-[0.9375rem] text-ink-muted">Remember what to ask your people</p>
         </div>
-        <Link to="/settings" className="btn-ghost btn-compact mt-1">
-          Settings
-        </Link>
+        <div className="mt-1 flex shrink-0 items-center gap-2">
+          <Link to="/map" className="btn-ghost btn-compact">
+            Map
+          </Link>
+          <Link to="/settings" className="btn-ghost btn-compact">
+            Settings
+          </Link>
+        </div>
       </header>
 
       <NearbyLocationSection people={allPeople} />

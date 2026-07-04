@@ -18,8 +18,8 @@
   --color-bi-blue: #0038a8;
   --shadow-soft: 0 1px 3px rgba(42, 36, 28, 0.06), 0 4px 16px rgba(42, 36, 28, 0.04);
   --shadow-lift: 0 2px 8px rgba(42, 36, 28, 0.08), 0 8px 24px rgba(42, 36, 28, 0.06);
-  --radius-card: 1rem;
-  --radius-input: 0.75rem;
+  --radius-card: 0.75rem;
+  --radius-input: 0.5rem;
 }
 
 @layer base {
@@ -135,29 +135,29 @@
   }
 
   .folder-card {
-    @apply mb-3 rounded-2xl bg-white/55 ring-1 ring-stone-200/55 transition-shadow;
+    @apply mb-2 rounded-lg bg-white/55 ring-1 ring-stone-200/55 transition-shadow;
     box-shadow: var(--shadow-soft);
   }
 
   .folder-card-unsorted {
-    @apply mb-3 rounded-2xl bg-stone-100/50 ring-1 ring-stone-200/55 transition-shadow;
+    @apply mb-2 rounded-lg bg-stone-100/50 ring-1 ring-stone-200/55 transition-shadow;
     box-shadow: var(--shadow-soft);
   }
 
   .pinned-strip {
-    @apply mb-4 rounded-2xl px-3 py-3 sm:px-4;
+    @apply mb-4 rounded-lg px-3 py-3 sm:px-4;
     background: linear-gradient(135deg, rgba(251, 236, 210, 0.65) 0%, rgba(255, 248, 235, 0.85) 100%);
     @apply ring-1 ring-amber-200/50;
     box-shadow: var(--shadow-soft);
   }
 
   .nearby-strip {
-    @apply relative mb-4 rounded-xl;
+    @apply relative mb-4 rounded-lg;
     animation: nearby-ring-glow 30s linear infinite;
   }
 
   .nearby-strip-blobs {
-    @apply pointer-events-none absolute inset-0 overflow-hidden rounded-xl;
+    @apply pointer-events-none absolute inset-0 overflow-hidden rounded-lg;
     z-index: 0;
     background: linear-gradient(
       90deg,
@@ -212,12 +212,25 @@
     @apply border-t border-stone-200/50;
   }
 
+  .map-shell {
+    @apply relative min-h-0 flex-1;
+  }
+
+  .map-canvas {
+    @apply absolute inset-0 h-full w-full;
+  }
+
+  .leaflet-container {
+    font-family: var(--font-sans);
+    background: var(--color-cream-deep);
+  }
+
   .empty-state {
     @apply py-10 text-center text-sm text-stone-400;
   }
 
   .dialog-panel {
-    @apply w-full max-w-sm rounded-2xl p-6;
+    @apply w-full max-w-sm rounded-xl p-6;
     background: rgba(255, 252, 248, 0.97);
     box-shadow: var(--shadow-lift);
     @apply ring-1 ring-stone-200/60 backdrop-blur-md;

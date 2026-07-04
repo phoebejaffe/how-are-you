@@ -16,6 +16,7 @@ export function FolderHeader({
   sortableHandleRef,
   sortableHandleProps,
   flush = false,
+  showBottomBorder = false,
 }: {
   name: string;
   count: number;
@@ -27,8 +28,9 @@ export function FolderHeader({
   sortableHandleRef?: (node: HTMLButtonElement | null) => void;
   sortableHandleProps?: HandleProps;
   flush?: boolean;
+  showBottomBorder?: boolean;
 }) {
-  const padX = flush ? "px-3" : "px-4";
+  const padX = flush ? "px-2" : "px-3";
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(name);
 
@@ -45,7 +47,7 @@ export function FolderHeader({
 
   return (
     <div
-      className={`flex items-center gap-0.5 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
+      className={`flex items-center gap-0.5 py-0.5 ${padX} ${showBottomBorder ? "border-b border-stone-200/50" : ""} ${isFolderReorderTarget ? "rounded-md ring-2 ring-amber-400/70" : ""}`}
     >
       {editingName ? (
         <form
@@ -87,7 +89,7 @@ export function FolderHeader({
           <button
             type="button"
             onClick={onToggleCollapsed}
-            className={`flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-xl px-1 text-left text-sm font-semibold text-ink transition-colors active:bg-white/50`}
+            className={`flex min-h-9 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-0.5 text-left text-sm font-semibold text-ink transition-colors active:bg-white/50`}
           >
             <span className="flex min-w-0 flex-1 items-baseline">
               <span className="truncate">{name}</span>
@@ -112,6 +114,7 @@ export function UnsortedFolderHeader({
   sortableHandleRef,
   sortableHandleProps,
   flush = false,
+  showBottomBorder = false,
 }: {
   label: string;
   count: number;
@@ -119,16 +122,17 @@ export function UnsortedFolderHeader({
   sortableHandleRef?: (node: HTMLButtonElement | null) => void;
   sortableHandleProps?: HandleProps;
   flush?: boolean;
+  showBottomBorder?: boolean;
 }) {
-  const padX = flush ? "px-3" : "px-4";
+  const padX = flush ? "px-2" : "px-3";
   return (
     <div
-      className={`flex items-center gap-0.5 py-1 ${padX} ${isFolderReorderTarget ? "rounded-xl ring-2 ring-amber-400/70" : ""}`}
+      className={`flex items-center gap-0.5 py-0.5 ${padX} ${showBottomBorder ? "border-b border-stone-200/50" : ""} ${isFolderReorderTarget ? "rounded-md ring-2 ring-amber-400/70" : ""}`}
     >
       {sortableHandleProps && (
         <DragHandle ref={sortableHandleRef} compact className="shrink-0" {...sortableHandleProps} />
       )}
-      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-1 text-sm font-semibold text-ink-muted">
+      <div className="flex min-h-9 min-w-0 flex-1 items-center gap-2 px-0.5 text-sm font-semibold text-ink-muted">
         <span className="min-w-0 truncate">{label}</span>
         <span className="shrink-0 text-xs font-normal tabular-nums">({count})</span>
       </div>

@@ -52,9 +52,9 @@ export function PeopleFolderSection({
     <div
       ref={mergeRefs(folderSortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`folder-card px-1 py-1 transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""} ${
+      className={`folder-card px-0.5 py-0.5 transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""} ${
         droppable.isOver ? "ring-2 ring-sage/50" : ""
-      } ${folder.collapsed && people.length === 0 ? "min-h-14" : ""}`}
+      } ${folder.collapsed && people.length === 0 ? "min-h-11" : ""}`}
     >
       <FolderHeader
         name={folder.name}
@@ -69,11 +69,12 @@ export function PeopleFolderSection({
           sortable ? { ...folderSortable.attributes, ...folderSortable.listeners } : undefined
         }
         flush
+        showBottomBorder={!folder.collapsed}
       />
 
       {!folder.collapsed && (
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          <ul className="list-divider px-1 pb-1">
+          <ul className="list-divider pb-0.5">
             {sortedPeople.map((person) => (
               <li key={person.nameKey}>
                 <SortablePersonRow

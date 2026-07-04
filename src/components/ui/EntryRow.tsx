@@ -54,7 +54,7 @@ export function EntryRow({
             }
           : undefined
       }
-      className={`flex items-start gap-2.5 rounded-xl leading-snug transition-colors ${
+      className={`flex items-start gap-2.5 rounded-lg leading-snug transition-colors ${
         compact ? "px-2 py-1.5 text-xs" : "px-2.5 py-2.5 text-[0.9375rem]"
       } ${
         highlighted

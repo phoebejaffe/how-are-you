@@ -42,9 +42,9 @@ export function UnsortedPeopleSection({
     <div
       ref={mergeRefs(folderSortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`folder-card-unsorted px-1 py-1 transition-shadow ${
+      className={`folder-card-unsorted px-0.5 py-0.5 transition-shadow ${
         folderSortable.isDragging ? "opacity-40" : ""
-      } ${droppable.isOver ? "ring-2 ring-sage/50" : ""} ${people.length === 0 ? "min-h-14" : ""}`}
+      } ${droppable.isOver ? "ring-2 ring-sage/50" : ""} ${people.length === 0 ? "min-h-11" : ""}`}
     >
       <UnsortedFolderHeader
         label="Unsorted"
@@ -55,9 +55,10 @@ export function UnsortedPeopleSection({
           sortable ? { ...folderSortable.attributes, ...folderSortable.listeners } : undefined
         }
         flush
+        showBottomBorder={people.length > 0}
       />
       <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <ul className="list-divider px-1 pb-1">
+        <ul className="list-divider pb-0.5">
           {sortedPeople.map((person) => (
             <li key={person.nameKey}>
               <SortablePersonRow

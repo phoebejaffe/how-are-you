@@ -44,7 +44,7 @@ export function CollectionFolderSection({
     <div
       ref={mergeRefs(sortable.setNodeRef, droppable.setNodeRef)}
       style={style}
-      className={`folder-card px-1 py-1 transition-shadow ${sortable.isDragging ? "opacity-40" : ""} ${
+      className={`folder-card px-0.5 py-0.5 transition-shadow ${sortable.isDragging ? "opacity-40" : ""} ${
         droppable.isOver ? "ring-2 ring-sage/50" : ""
       }`}
     >
@@ -59,9 +59,10 @@ export function CollectionFolderSection({
         sortableHandleRef={sortable.setActivatorNodeRef}
         sortableHandleProps={{ ...sortable.attributes, ...sortable.listeners }}
         flush
+        showBottomBorder={!folder.collapsed}
       />
 
-      {!folder.collapsed && <div className="flex flex-col gap-y-1 px-2 pb-2">{children}</div>}
+      {!folder.collapsed && <div className="flex flex-col gap-y-0.5 px-1.5 pb-1">{children}</div>}
 
       <ConfirmDialog
         open={confirmDelete}

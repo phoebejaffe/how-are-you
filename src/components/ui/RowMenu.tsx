@@ -77,7 +77,7 @@ export function RowMenu({ items, compact = false }: { items: RowMenuItem[]; comp
     <div
       ref={menuRef}
       role="menu"
-      className="min-w-[8.5rem] overflow-hidden rounded-xl bg-white py-1 shadow-lg ring-1 ring-stone-200/80"
+      className="min-w-[8.5rem] overflow-hidden rounded-lg bg-white py-1 shadow-lg ring-1 ring-stone-200/80"
       style={{
         ...menuStyle,
         boxShadow: "var(--shadow-lift)",
@@ -109,7 +109,7 @@ export function RowMenu({ items, compact = false }: { items: RowMenuItem[]; comp
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex shrink-0 items-center justify-center rounded-xl text-lg leading-none text-ink-muted transition-colors active:bg-white/70 active:text-ink ${
+        className={`flex shrink-0 items-center justify-center rounded-lg text-lg leading-none text-ink-muted transition-colors active:bg-white/70 active:text-ink ${
           compact ? "size-8 text-base" : "size-11"
         }`}
         aria-label="Actions"

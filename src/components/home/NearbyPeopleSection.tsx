@@ -57,7 +57,7 @@ export function NearbyPeopleSection({
             type="button"
             onClick={() => toggleCollapsed()}
             aria-expanded={!collapsed}
-            className="flex min-h-9 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-lg px-1 text-left transition-colors active:bg-white/40"
+            className="flex min-h-9 min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-md px-1 text-left transition-colors active:bg-white/40"
           >
             <ChevronIcon
               className={`h-4 w-4 shrink-0 text-bi-purple transition-transform ${collapsed ? "-rotate-90" : ""}`}
@@ -80,7 +80,7 @@ export function NearbyPeopleSection({
               <li key={group.key}>
                 <div className="flex items-baseline justify-between gap-2 px-0.5">
                   <h3 className="min-w-0 truncate text-sm font-medium text-ink">{group.placeName}</h3>
-                  <span className="shrink-0 rounded-md bg-linear-to-r from-bi-pink/15 to-bi-blue/15 px-2 py-0.5 text-xs font-medium text-bi-purple">
+                  <span className="shrink-0 text-xs text-ink-muted">
                     {formatDistanceFeet(group.distanceFeet)}
                   </span>
                 </div>
@@ -89,7 +89,7 @@ export function NearbyPeopleSection({
                     <li key={`${group.key}-${person.nameKey}`}>
                       <Link
                         to={`/person/${encodeURIComponent(person.nameKey)}`}
-                        className="flex items-baseline justify-between gap-2 rounded-lg bg-white/80 px-3 py-2 ring-1 ring-bi-purple/20 transition-colors active:bg-white"
+                        className="flex items-baseline justify-between gap-2 rounded-md bg-white/80 px-3 py-2 ring-1 ring-bi-purple/20 transition-colors active:bg-white"
                       >
                         <span className="min-w-0 text-[0.9375rem] text-ink">
                           <span className="font-medium">{person.displayName}</span>
