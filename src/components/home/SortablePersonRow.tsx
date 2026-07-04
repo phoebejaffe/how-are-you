@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Person } from "../../types";
-import { personDragId } from "../dnd/dndIds";
+import { personDragId, type PersonDragData } from "../dnd/dndIds";
 import { PersonListRow } from "./PersonListRow";
 
 export function SortablePersonRow({
@@ -16,6 +16,11 @@ export function SortablePersonRow({
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({
       id: personDragId(person.nameKey),
+      data: {
+        type: "person",
+        nameKey: person.nameKey,
+        folderId: person.folderId ?? null,
+      } satisfies PersonDragData,
       disabled: !sortable,
     });
 
@@ -29,7 +34,11 @@ export function SortablePersonRow({
   }
 
   return (
-    <div ref={setNodeRef} style={style} className={isDragging ? "z-10 opacity-40" : ""}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "pointer-events-none opacity-0" : ""}
+    >
       <PersonListRow
         person={person}
         onDelete={onDelete}

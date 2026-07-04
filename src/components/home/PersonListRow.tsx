@@ -12,12 +12,15 @@ export function PersonListRow({
   onDelete,
   dragHandleRef,
   dragHandleProps,
+  trailingSpacer = false,
   className = "",
 }: {
   person: Person;
   onDelete?: () => void;
   dragHandleRef?: (node: HTMLButtonElement | null) => void;
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
+  /** Match source row width when rendered in DragOverlay (menu column absent). */
+  trailingSpacer?: boolean;
   className?: string;
 }) {
   const navigate = useNavigate();
@@ -59,6 +62,7 @@ export function PersonListRow({
           <RowMenu items={menuItems} />
         </div>
       )}
+      {trailingSpacer && <div className="mr-1 size-11 shrink-0" aria-hidden />}
     </div>
   );
 }

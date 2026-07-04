@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { validateRename } from "../domain/personRename";
-import { findImportConflicts, mergePersonBundles, parseExportText } from "../domain/importExport";
+import { findImportConflicts, mergePeopleFoldersByName, mergePersonBundles, parseExportText, remapPersonBundlePeopleFolder } from "../domain/importExport";
 import {
   clearPersistedUndo,
   createUndoAction,
@@ -108,6 +108,7 @@ interface AppState {
   ensureSearchBundles: () => Promise<void>;
   updatePersonImportantDates: (nameKey: string, dates: ImportantDate[]) => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
+  applyPeopleLayoutOrder: (order: string[]) => Promise<void>;
   undoAction: (action: UndoAction) => Promise<void>;
   commitUndo: (action: UndoAction) => Promise<void>;
   restorePersistedUndos: () => Promise<void>;
@@ -1011,15 +1012,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
 
-  async reorderPeopleLayout(draggedId, targetId) {
-    if (draggedId === targetId) return;
-
+  async applyPeopleLayoutOrder(order) {
+    savePeopleLayoutOrder(order);
     const folders = get().peopleFolders;
-    const currentOrder = resolvePeopleLayoutOrder(folders);
-    const nextOrder = reorderLayoutItems(currentOrder, draggedId, targetId);
-    savePeopleLayoutOrder(nextOrder);
-
-    const reorderedFolders = peopleFoldersFromLayoutOrder(folders, nextOrder);
+    const reorderedFolders = peopleFoldersFromLayoutOrder(folders, order);
     for (const folder of reorderedFolders) {
       const prev = folders.find((f) => f.id === folder.id);
       if (prev && prev.sortOrder !== folder.sortOrder) {
@@ -1027,6 +1023,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     }
     set({ peopleFolders: reorderedFolders });
+  },
+
+  async reorderPeopleLayout(draggedId, targetId) {
+    if (draggedId === targetId) return;
+
+    const folders = get().peopleFolders;
+    const currentOrder = resolvePeopleLayoutOrder(folders);
+    const nextOrder = reorderLayoutItems(currentOrder, draggedId, targetId);
+    await get().applyPeopleLayoutOrder(nextOrder);
   },
 
   async scheduleDeleteFact(factId) {
@@ -1170,16 +1175,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   async applyImportResolutions(importedPeople, resolutions, peopleFolders = []) {
     const existing = await repo.listAllBundles();
     const existingByKey = new Map(existing.map((b) => [b.person.nameKey, b]));
+    const existingFolders = await repo.listPeopleFolders();
+    const { foldersToSave, folderIdMap } = mergePeopleFoldersByName(existingFolders, peopleFolders);
+    const remapFolder = (bundle: PersonBundle) => remapPersonBundlePeopleFolder(bundle, folderIdMap);
     let imported = 0;
     let mergedCount = 0;
     let skipped = 0;
 
     for (const bundle of importedPeople) {
-      const key = bundle.person.nameKey;
+      const remapped = remapFolder(bundle);
+      const key = remapped.person.nameKey;
       const existingBundle = existingByKey.get(key);
 
       if (!existingBundle) {
-        await repo.savePersonBundle(bundle);
+        await repo.savePersonBundle(remapped);
         imported++;
         continue;
       }
@@ -1188,18 +1197,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (resolution === "ignore") {
         skipped++;
       } else if (resolution === "override") {
-        await repo.replacePersonBundle(key, bundle);
+        await repo.replacePersonBundle(key, remapped);
         imported++;
       } else if (resolution === "merge") {
-        await repo.replacePersonBundle(key, mergePersonBundles(existingBundle, bundle));
+        await repo.replacePersonBundle(key, mergePersonBundles(existingBundle, remapped));
         mergedCount++;
       }
     }
 
-    if (peopleFolders.length > 0) {
-      for (const folder of peopleFolders) {
-        await repo.savePeopleFolder(folder);
-      }
+    for (const folder of foldersToSave) {
+      await repo.savePeopleFolder(folder);
+    }
+    if (foldersToSave.length > 0) {
       set({ peopleFolders: await repo.listPeopleFolders() });
     }
 

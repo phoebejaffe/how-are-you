@@ -18,7 +18,7 @@ export function HomePage() {
   const togglePeopleFolderCollapsed = useAppStore((s) => s.togglePeopleFolderCollapsed);
   const movePersonToFolder = useAppStore((s) => s.movePersonToFolder);
   const dropPersonOnPerson = useAppStore((s) => s.dropPersonOnPerson);
-  const reorderPeopleLayout = useAppStore((s) => s.reorderPeopleLayout);
+  const applyPeopleLayoutOrder = useAppStore((s) => s.applyPeopleLayoutOrder);
   const bundles = useAppStore((s) => s.bundles);
   const ensureSearchBundles = useAppStore((s) => s.ensureSearchBundles);
   const [query, setQuery] = useState("");
@@ -85,7 +85,7 @@ export function HomePage() {
         onRenameFolder={(folderId, name) => void renamePeopleFolder(folderId, name)}
         onDeleteFolder={(folderId) => void deletePeopleFolder(folderId)}
         onToggleFolderCollapsed={(folderId) => void togglePeopleFolderCollapsed(folderId)}
-        onReorderLayout={(draggedId, targetId) => void reorderPeopleLayout(draggedId, targetId)}
+        onApplyLayoutOrder={(order) => void applyPeopleLayoutOrder(order)}
       />
 
       <ConfirmDialog

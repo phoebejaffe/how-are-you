@@ -7,6 +7,7 @@ export function AppDndContext({
   onDragMove,
   onDragEnd,
   onDragCancel,
+  autoScroll = true,
   ...rest
 }: DndContextProps) {
   const guard = useDragClickGuard();
@@ -14,6 +15,7 @@ export function AppDndContext({
   return (
     <DndContext
       {...rest}
+      autoScroll={autoScroll}
       onDragStart={(event) => {
         guard.onDragStart(event);
         onDragStart?.(event);

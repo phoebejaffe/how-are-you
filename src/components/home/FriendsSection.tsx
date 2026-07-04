@@ -1,18 +1,5 @@
-import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
-import { AppDndContext } from "../dnd/AppDndContext";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PeopleFolder, Person } from "../../types";
-import {
-  folderIdFromDropId,
-  folderIdFromSortId,
-  folderSortId,
-  isFolderDropId,
-  isFolderSortId,
-  isPersonDragId,
-} from "../dnd/dndIds";
-import { personCollisionDetection } from "../dnd/personCollisionDetection";
-import { useAppDndSensors } from "../dnd/dndSensors";
 import {
   groupPeople,
   moveUnsortedToEnd,
@@ -26,6 +13,7 @@ import { PersonPlusIcon } from "../ui/PersonPlusIcon";
 import { AddPersonDialog } from "./AddPersonDialog";
 import { PeopleFolderSection } from "./PeopleFolderSection";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
+import { PeopleListDnd } from "./people-dnd/PeopleListDnd";
 
 export function FriendsSection({
   people,
@@ -39,7 +27,7 @@ export function FriendsSection({
   onRenameFolder,
   onDeleteFolder,
   onToggleFolderCollapsed,
-  onReorderLayout,
+  onApplyLayoutOrder,
 }: {
   people: Person[];
   folders: PeopleFolder[];
@@ -52,21 +40,18 @@ export function FriendsSection({
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onToggleFolderCollapsed: (folderId: string) => void;
-  onReorderLayout: (draggedId: string, targetId: string) => void;
+  onApplyLayoutOrder: (order: string[]) => void;
 }) {
-  const sensors = useAppDndSensors();
   const [addingFolder, setAddingFolder] = useState(false);
   const [addingPerson, setAddingPerson] = useState(false);
   const [folderName, setFolderName] = useState("");
-  const [activePersonKey, setActivePersonKey] = useState<string | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null | undefined>(undefined);
   const [layoutVersion, setLayoutVersion] = useState(0);
+  const [draggingPerson, setDraggingPerson] = useState(false);
 
   const grouped = useMemo(() => groupPeople(people, folders), [people, folders]);
   const hasFolders = folders.length > 0;
   const hasAnyPeople = people.length > 0 || hasFolders;
-
-  const layoutOrder = useMemo(() => resolvePeopleLayoutOrder(folders), [folders, layoutVersion]);
-  const sortableIds = useMemo(() => layoutOrder.map((id) => folderSortId(id)), [layoutOrder]);
 
   const folderPeopleMap = useMemo(() => {
     const map = new Map<string, Person[]>();
@@ -78,7 +63,7 @@ export function FriendsSection({
 
   const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
 
-  const unsortedVisible = grouped.unsorted.length > 0 || activePersonKey !== null;
+  const unsortedVisible = grouped.unsorted.length > 0 || draggingPerson;
   const wasUnsortedVisibleRef = useRef(unsortedVisible);
 
   useEffect(() => {
@@ -91,82 +76,41 @@ export function FriendsSection({
     wasUnsortedVisibleRef.current = unsortedVisible;
   }, [unsortedVisible, folders, sortable]);
 
-  function handleDragStart(event: DragStartEvent) {
-    const id = String(event.active.id);
-    if (isPersonDragId(id)) {
-      setActivePersonKey(id.slice("person:".length));
-    }
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    setActivePersonKey(null);
-    if (!over) return;
-
-    const activeId = String(active.id);
-    const overId = String(over.id);
-
-    if (isPersonDragId(activeId) && isPersonDragId(overId) && activeId !== overId) {
-      onDropPersonOnPerson(activeId.slice("person:".length), overId.slice("person:".length));
-      return;
-    }
-
-    if (isPersonDragId(activeId)) {
-      const nameKey = activeId.slice("person:".length);
-      let targetFolderId: string | null | undefined;
-
-      if (isFolderDropId(overId)) {
-        targetFolderId = folderIdFromDropId(overId);
-      } else if (isFolderSortId(overId)) {
-        const folderId = folderIdFromSortId(overId);
-        targetFolderId = folderId === UNSORTED_DROP_ID ? null : folderId;
+  function renderFolderList(layoutOrder: string[]) {
+    return layoutOrder.map((itemId) => {
+      if (itemId === UNSORTED_DROP_ID) {
+        if (!unsortedVisible) return null;
+        return (
+          <UnsortedPeopleSection
+            key={itemId}
+            people={grouped.unsorted}
+            sortable={sortable}
+            highlightDropTarget={dragOverFolderId === null}
+            onDeletePerson={onDeletePerson}
+          />
+        );
       }
 
-      if (targetFolderId !== undefined) {
-        const person = people.find((p) => p.nameKey === nameKey);
-        const currentFolderId = person?.folderId ?? null;
-        if (person && currentFolderId !== targetFolderId) {
-          onMovePersonToFolder(nameKey, targetFolderId);
-        }
-      }
-      return;
-    }
+      const folder = folderMap.get(itemId);
+      if (!folder) return null;
 
-    if (isFolderSortId(activeId) && isFolderSortId(overId) && activeId !== overId) {
-      onReorderLayout(folderIdFromSortId(activeId), folderIdFromSortId(overId));
-      setLayoutVersion((v) => v + 1);
-    }
-  }
-
-  const folderList = layoutOrder.map((itemId) => {
-    if (itemId === UNSORTED_DROP_ID) {
-      if (!unsortedVisible) return null;
       return (
-        <UnsortedPeopleSection
+        <PeopleFolderSection
           key={itemId}
-          people={grouped.unsorted}
+          folder={folder}
+          people={folderPeopleMap.get(itemId) ?? []}
           sortable={sortable}
+          highlightDropTarget={dragOverFolderId === folder.id}
+          onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
+          onRename={(name) => onRenameFolder(folder.id, name)}
+          onDelete={() => onDeleteFolder(folder.id)}
           onDeletePerson={onDeletePerson}
         />
       );
-    }
+    });
+  }
 
-    const folder = folderMap.get(itemId);
-    if (!folder) return null;
-
-    return (
-      <PeopleFolderSection
-        key={itemId}
-        folder={folder}
-        people={folderPeopleMap.get(itemId) ?? []}
-        sortable={sortable}
-        onToggleCollapsed={() => onToggleFolderCollapsed(folder.id)}
-        onRename={(name) => onRenameFolder(folder.id, name)}
-        onDelete={() => onDeleteFolder(folder.id)}
-        onDeletePerson={onDeletePerson}
-      />
-    );
-  });
+  const staticLayoutOrder = useMemo(() => resolvePeopleLayoutOrder(folders), [folders, layoutVersion]);
 
   return (
     <section>
@@ -223,18 +167,21 @@ export function FriendsSection({
       {!hasAnyPeople && <p className="empty-state">No people yet — tap the add person button to get started.</p>}
 
       {sortable ? (
-        <AppDndContext
-          sensors={sensors}
-          collisionDetection={personCollisionDetection}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
+        <PeopleListDnd
+          folders={folders}
+          people={people}
+          layoutVersion={layoutVersion}
+          onMovePersonToFolder={onMovePersonToFolder}
+          onDropPersonOnPerson={onDropPersonOnPerson}
+          onApplyLayoutOrder={onApplyLayoutOrder}
+          onHighlightFolder={setDragOverFolderId}
+          onFolderReorderDone={() => setLayoutVersion((v) => v + 1)}
+          onPersonDragChange={setDraggingPerson}
         >
-          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-            {folderList}
-          </SortableContext>
-        </AppDndContext>
+          {renderFolderList}
+        </PeopleListDnd>
       ) : (
-        folderList
+        renderFolderList(staticLayoutOrder)
       )}
 
       <AddPersonDialog

@@ -5,7 +5,6 @@ import { CSS } from "@dnd-kit/utilities";
 import type { PeopleFolder, Person } from "../../types";
 import { sortPeopleInFolder } from "../../lib/personOrder";
 import { folderDropId, folderSortId, personDragId, type FolderDropData, type FolderSortData } from "../dnd/dndIds";
-import { mergeRefs } from "../dnd/mergeRefs";
 import { FolderHeader } from "../folders/FolderHeader";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { SortablePersonRow } from "./SortablePersonRow";
@@ -18,6 +17,7 @@ export function PeopleFolderSection({
   onDelete,
   onDeletePerson,
   sortable = true,
+  highlightDropTarget = false,
 }: {
   folder: PeopleFolder;
   people: Person[];
@@ -26,6 +26,7 @@ export function PeopleFolderSection({
   onDelete: () => void;
   onDeletePerson: (nameKey: string) => void;
   sortable?: boolean;
+  highlightDropTarget?: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const sortedPeople = sortPeopleInFolder(people, folder.id);
@@ -43,18 +44,16 @@ export function PeopleFolderSection({
     disabled: !sortable,
   });
 
-  const style = {
+  const sortStyle = {
     transform: CSS.Transform.toString(folderSortable.transform),
     transition: folderSortable.transition,
   };
 
   return (
     <div
-      ref={mergeRefs(folderSortable.setNodeRef, droppable.setNodeRef)}
-      style={style}
-      className={`folder-card px-0.5 py-0.5 transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""} ${
-        droppable.isOver ? "ring-2 ring-sage/50" : ""
-      } ${folder.collapsed && people.length === 0 ? "min-h-11" : ""}`}
+      ref={folderSortable.setNodeRef}
+      style={sortStyle}
+      className={`folder-card px-0.5 py-0.5 transition-shadow ${folderSortable.isDragging ? "opacity-40" : ""}`}
     >
       <FolderHeader
         name={folder.name}
@@ -72,21 +71,28 @@ export function PeopleFolderSection({
         showBottomBorder={!folder.collapsed}
       />
 
-      {!folder.collapsed && (
-        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          <ul className="list-divider pb-0.5">
-            {sortedPeople.map((person) => (
-              <li key={person.nameKey}>
-                <SortablePersonRow
-                  person={person}
-                  sortable={sortable}
-                  onDelete={() => onDeletePerson(person.nameKey)}
-                />
-              </li>
-            ))}
-          </ul>
-        </SortableContext>
-      )}
+      <div
+        ref={droppable.setNodeRef}
+        className={`rounded-md transition-shadow ${highlightDropTarget ? "ring-2 ring-sage/50" : ""} ${
+          folder.collapsed && people.length === 0 ? "min-h-11" : ""
+        }`}
+      >
+        {!folder.collapsed && (
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <ul className="list-divider pb-0.5">
+              {sortedPeople.map((person) => (
+                <li key={person.nameKey}>
+                  <SortablePersonRow
+                    person={person}
+                    sortable={sortable}
+                    onDelete={() => onDeletePerson(person.nameKey)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </SortableContext>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmDelete}

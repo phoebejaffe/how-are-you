@@ -32,7 +32,7 @@ describe("mergePersonContext", () => {
 });
 
 describe("personListSubtitles", () => {
-  it("shows context only", () => {
+  it("shows context when set", () => {
     expect(
       personListSubtitles({
         ...person,
@@ -42,9 +42,13 @@ describe("personListSubtitles", () => {
     ).toEqual(["the juggler"]);
   });
 
-  it("returns empty when no context", () => {
-    expect(personListSubtitles({ ...person, locations: [{ id: "1", label: "Met", name: "Portland" }] })).toEqual(
-      [],
-    );
+  it("shows place names when there is no context", () => {
+    expect(personListSubtitles({ ...person, locations: [{ id: "1", label: "Met", name: "Portland" }] })).toEqual([
+      "Portland",
+    ]);
+  });
+
+  it("returns empty when there is no context or location", () => {
+    expect(personListSubtitles(person)).toEqual([]);
   });
 });

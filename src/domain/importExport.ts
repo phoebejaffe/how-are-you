@@ -80,6 +80,70 @@ export function findImportConflicts(
   return conflicts;
 }
 
+function normalizePeopleFolderName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** Merge imported people folders into existing ones when names match; returns id remap for people. */
+export function mergePeopleFoldersByName(
+  existing: PeopleFolder[],
+  imported: PeopleFolder[],
+): { foldersToSave: PeopleFolder[]; folderIdMap: Map<string, string> } {
+  const existingByName = new Map<string, PeopleFolder>();
+  for (const folder of [...existing].sort((a, b) => a.sortOrder - b.sortOrder)) {
+    const key = normalizePeopleFolderName(folder.name);
+    if (!existingByName.has(key)) {
+      existingByName.set(key, folder);
+    }
+  }
+
+  const existingIds = new Set(existing.map((folder) => folder.id));
+  const folderIdMap = new Map<string, string>();
+  const foldersToSave: PeopleFolder[] = [];
+  const maxOrder = existing.reduce((max, folder) => Math.max(max, folder.sortOrder), -1);
+  let nextOrder = maxOrder + 1;
+
+  for (const importedFolder of imported) {
+    const key = normalizePeopleFolderName(importedFolder.name);
+    const match = existingByName.get(key);
+    if (match) {
+      folderIdMap.set(importedFolder.id, match.id);
+      continue;
+    }
+
+    const pending = foldersToSave.find((folder) => normalizePeopleFolderName(folder.name) === key);
+    if (pending) {
+      folderIdMap.set(importedFolder.id, pending.id);
+      continue;
+    }
+
+    let folder: PeopleFolder = {
+      ...importedFolder,
+      name: importedFolder.name.trim(),
+      sortOrder: importedFolder.sortOrder ?? nextOrder++,
+    };
+    if (existingIds.has(folder.id) || foldersToSave.some((entry) => entry.id === folder.id)) {
+      folder = { ...folder, id: createId() };
+    }
+    foldersToSave.push(folder);
+    existingByName.set(key, folder);
+    folderIdMap.set(importedFolder.id, folder.id);
+  }
+
+  return { foldersToSave, folderIdMap };
+}
+
+export function remapPersonBundlePeopleFolder(
+  bundle: PersonBundle,
+  folderIdMap: Map<string, string>,
+): PersonBundle {
+  const folderId = bundle.person.folderId;
+  if (!folderId) return bundle;
+  const remapped = folderIdMap.get(folderId) ?? folderId;
+  if (remapped === folderId) return bundle;
+  return { ...bundle, person: { ...bundle.person, folderId: remapped } };
+}
+
 function remapIds<T extends { id: string }>(items: T[], usedIds: Set<string>): T[] {
   return items.map((item) => {
     if (!usedIds.has(item.id)) {

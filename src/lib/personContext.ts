@@ -1,3 +1,4 @@
+import { locationSummary } from "./personLocations";
 import type { Person } from "../types";
 
 export function sanitizePersonContext(value: string | undefined): string | undefined {
@@ -24,5 +25,8 @@ export function mergePersonContext(
 
 export function personListSubtitles(person: Person): string[] {
   const context = sanitizePersonContext(person.context);
-  return context ? [context] : [];
+  if (context) return [context];
+
+  const location = locationSummary(person);
+  return location ? [location] : [];
 }

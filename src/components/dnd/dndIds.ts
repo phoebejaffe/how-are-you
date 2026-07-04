@@ -1,6 +1,6 @@
 import { UNSORTED_DROP_ID } from "../../lib/folders";
 
-export type PersonDragData = { type: "person"; nameKey: string };
+export type PersonDragData = { type: "person"; nameKey: string; folderId: string | null };
 export type FactDragData = { type: "fact"; factId: string };
 export type TopicSortData = { type: "topic-sort"; topicId: string };
 export type FolderSortData = { type: "folder-sort"; folderId: string };
