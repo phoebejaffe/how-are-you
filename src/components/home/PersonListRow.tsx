@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DragHandle } from "../dnd/DragHandle";
-import { locationSummary } from "../../lib/personLocations";
+import { personListSubtitles } from "../../lib/personContext";
 import type { Person } from "../../types";
 import { RelativeTime } from "../ui/RelativeTime";
 import { RowMenu } from "../ui/RowMenu";
@@ -22,7 +22,7 @@ export function PersonListRow({
 }) {
   const navigate = useNavigate();
   const personPath = `/person/${encodeURIComponent(person.nameKey)}`;
-  const hint = locationSummary(person);
+  const subtitles = personListSubtitles(person);
 
   const menuItems = useMemo(
     () =>
@@ -51,7 +51,11 @@ export function PersonListRow({
               </span>
             )}
           </span>
-          {hint && <span className="truncate text-xs text-ink-muted">{hint}</span>}
+          {subtitles.map((line) => (
+            <span key={line} className="truncate text-xs text-ink-muted">
+              {line}
+            </span>
+          ))}
         </button>
       </div>
       {menuItems.length > 0 && (

@@ -22,6 +22,7 @@ import {
 } from "../../lib/peopleFolders";
 import { FolderPlusIcon } from "../ui/FolderPlusIcon";
 import { IconButton } from "../ui/IconButton";
+import { AddPersonDialog } from "./AddPersonDialog";
 import { PeopleFolderSection } from "./PeopleFolderSection";
 import { UnsortedPeopleSection } from "./UnsortedPeopleSection";
 
@@ -32,6 +33,7 @@ export function FriendsSection({
   onDeletePerson,
   onMovePersonToFolder,
   onDropPersonOnPerson,
+  onAddPerson,
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -44,6 +46,7 @@ export function FriendsSection({
   onDeletePerson: (nameKey: string) => void;
   onMovePersonToFolder: (nameKey: string, folderId: string | null) => void;
   onDropPersonOnPerson: (draggedKey: string, targetKey: string) => void;
+  onAddPerson: (name: string) => Promise<void>;
   onAddFolder: (name: string) => void;
   onRenameFolder: (folderId: string, name: string) => void;
   onDeleteFolder: (folderId: string) => void;
@@ -52,6 +55,7 @@ export function FriendsSection({
 }) {
   const sensors = useAppDndSensors();
   const [addingFolder, setAddingFolder] = useState(false);
+  const [addingPerson, setAddingPerson] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [activePersonKey, setActivePersonKey] = useState<string | null>(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
@@ -167,11 +171,16 @@ export function FriendsSection({
     <section>
       <div className="section-header">
         <h2 className="section-title">Friends</h2>
-        {!addingFolder && (
-          <IconButton className="ml-auto" onClick={() => setAddingFolder(true)} aria-label="New folder">
-            <FolderPlusIcon />
+        <div className="ml-auto flex items-center gap-1">
+          <IconButton onClick={() => setAddingPerson(true)} aria-label="Add friend">
+            👤+
           </IconButton>
-        )}
+          {!addingFolder && (
+            <IconButton onClick={() => setAddingFolder(true)} aria-label="New folder">
+              <FolderPlusIcon />
+            </IconButton>
+          )}
+        </div>
       </div>
 
       {addingFolder && (
@@ -210,7 +219,7 @@ export function FriendsSection({
         </form>
       )}
 
-      {!hasAnyPeople && <p className="empty-state">No friends yet — add someone above.</p>}
+      {!hasAnyPeople && <p className="empty-state">No friends yet — tap 👤+ to add someone.</p>}
 
       {sortable ? (
         <AppDndContext
@@ -226,6 +235,12 @@ export function FriendsSection({
       ) : (
         folderList
       )}
+
+      <AddPersonDialog
+        open={addingPerson}
+        onClose={() => setAddingPerson(false)}
+        onAdd={onAddPerson}
+      />
     </section>
   );
 }

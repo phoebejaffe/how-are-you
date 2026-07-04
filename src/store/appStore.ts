@@ -103,6 +103,7 @@ interface AppState {
   reorderPeople: (draggedKey: string, targetKey: string) => Promise<void>;
   dropPersonOnPerson: (draggedKey: string, targetKey: string) => Promise<void>;
   updatePersonLocations: (nameKey: string, locations: PersonLocation[]) => Promise<void>;
+  updatePersonContext: (nameKey: string, context: string | undefined) => Promise<void>;
   ensureSearchBundles: () => Promise<void>;
   updatePersonImportantDates: (nameKey: string, dates: ImportantDate[]) => Promise<void>;
   reorderPeopleLayout: (draggedId: string, targetId: string) => Promise<void>;
@@ -939,6 +940,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       updatedAtIso: nowIso(),
       locations: locations.length > 0 ? locations : undefined,
     };
+
+    await repo.savePerson(next);
+    set({
+      people: get().people.map((p) => (p.nameKey === nameKey ? next : p)),
+      bundles: {
+        ...get().bundles,
+        [nameKey]: get().bundles[nameKey]
+          ? { ...get().bundles[nameKey], person: next }
+          : get().bundles[nameKey],
+      },
+    });
+  },
+
+  async updatePersonContext(nameKey, context) {
+    const person = get().people.find((p) => p.nameKey === nameKey);
+    if (!person) return;
+
+    const { context: _context, ...rest } = person;
+    const next: Person = context
+      ? { ...person, updatedAtIso: nowIso(), context }
+      : { ...rest, updatedAtIso: nowIso() };
 
     await repo.savePerson(next);
     set({

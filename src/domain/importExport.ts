@@ -1,5 +1,6 @@
 import { createId } from "../lib/ids";
 import { mergeImportantDates, normalizePersonImportantDates } from "../lib/personImportantDates";
+import { mergePersonContext, normalizePersonContext } from "../lib/personContext";
 import { mergePersonLocations, normalizePersonLocations } from "../lib/personLocations";
 import type {
   ExportPayload,
@@ -120,13 +121,18 @@ export function mergePersonBundles(existing: PersonBundle, imported: PersonBundl
 
   return {
     person: (() => {
-      const existingPerson = normalizePersonImportantDates(normalizePersonLocations(existing.person));
-      const importedPerson = normalizePersonImportantDates(normalizePersonLocations(imported.person));
+      const existingPerson = normalizePersonContext(
+        normalizePersonImportantDates(normalizePersonLocations(existing.person)),
+      );
+      const importedPerson = normalizePersonContext(
+        normalizePersonImportantDates(normalizePersonLocations(imported.person)),
+      );
       return {
         ...existingPerson,
         displayName: existing.person.displayName,
         locations: mergePersonLocations(existingPerson.locations, importedPerson.locations),
         importantDates: mergeImportantDates(existingPerson.importantDates, importedPerson.importantDates),
+        context: mergePersonContext(existingPerson.context, importedPerson.context),
         updatedAtIso: new Date().toISOString(),
       };
     })(),

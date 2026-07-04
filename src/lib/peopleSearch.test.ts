@@ -51,6 +51,10 @@ describe("personMatchesSearch", () => {
     expect(personMatchesSearch(person, bundle, "alex")).toBe(true);
   });
 
+  it("matches context", () => {
+    expect(personMatchesSearch({ ...person, context: "the juggler" }, bundle, "juggler")).toBe(true);
+  });
+
   it("matches topic text", () => {
     expect(personMatchesSearch(person, undefined, "portland")).toBe(false);
     expect(personMatchesSearch(person, bundle, "portland")).toBe(true);

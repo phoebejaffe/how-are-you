@@ -33,6 +33,8 @@ export interface Person {
   workLocation?: string;
   locations?: PersonLocation[];
   importantDates?: ImportantDate[];
+  /** How you remember who this person is, e.g. "the tall brother". */
+  context?: string;
   lastActivityAtIso?: string;
   lastActivityType?: ActivityType;
 }

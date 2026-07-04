@@ -1,4 +1,5 @@
 import { withFactSortOrders } from "../lib/factOrder";
+import { normalizePersonContext } from "../lib/personContext";
 import { normalizePersonImportantDates } from "../lib/personImportantDates";
 import { normalizePersonLocations } from "../lib/personLocations";
 import { computeLastActivityFromData, withLastActivity } from "../lib/lastActivity";
@@ -55,7 +56,7 @@ async function persistNormalized<T extends Topic | Fact>(
 export async function listPeople(): Promise<Person[]> {
   const db = await getDb();
   const people = (await db.getAll("people")).map((person) =>
-    normalizePersonImportantDates(normalizePersonLocations(person)),
+    normalizePersonContext(normalizePersonImportantDates(normalizePersonLocations(person))),
   );
   const enriched = await Promise.all(people.map((person) => enrichPersonActivity(person)));
   const normalized = withPersonSortOrders(enriched);
@@ -113,7 +114,7 @@ export async function getPersonBundle(nameKey: string): Promise<PersonBundle | n
   const db = await getDb();
   const rawPerson = await db.get("people", nameKey);
   if (!rawPerson) return null;
-  const person = normalizePersonImportantDates(normalizePersonLocations(rawPerson));
+  const person = normalizePersonContext(normalizePersonImportantDates(normalizePersonLocations(rawPerson)));
 
   const [topics, facts, factFolders, topicFolders] = await Promise.all([
     db.getAllFromIndex("topics", "by-person", nameKey),

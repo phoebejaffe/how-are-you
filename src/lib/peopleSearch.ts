@@ -8,6 +8,7 @@ export function personMatchesSearch(
   const q = query.trim().toLowerCase();
   if (!q) return true;
   if (person.displayName.toLowerCase().includes(q)) return true;
+  if (person.context?.toLowerCase().includes(q)) return true;
   if (!bundle) return false;
   if (bundle.topics.some((topic) => topic.text.toLowerCase().includes(q))) return true;
   if (bundle.facts.some((fact) => fact.text.toLowerCase().includes(q))) return true;

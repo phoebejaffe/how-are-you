@@ -11,6 +11,7 @@ import { findPersonKey } from "../lib/ids";
 import { sortPinnedFacts } from "../lib/factOrder";
 import { computeTimeCluster } from "../lib/timeCluster";
 import { sortPinnedTopics, sortUnpinnedTopics } from "../lib/topicOrder";
+import { PersonContextSection } from "../components/person/PersonContextSection";
 import { PersonImportantDatesSection } from "../components/person/PersonImportantDatesSection";
 import { useAppStore } from "../store/appStore";
 
@@ -31,6 +32,7 @@ export function PersonPage() {
   const loadBundle = useAppStore((s) => s.loadBundle);
   const renamePerson = useAppStore((s) => s.renamePerson);
   const updatePersonLocations = useAppStore((s) => s.updatePersonLocations);
+  const updatePersonContext = useAppStore((s) => s.updatePersonContext);
   const updatePersonImportantDates = useAppStore((s) => s.updatePersonImportantDates);
   const addTopic = useAppStore((s) => s.addTopic);
   const addFact = useAppStore((s) => s.addFact);
@@ -219,6 +221,11 @@ export function PersonPage() {
         )}
         {nameError && <p className="mt-2 text-sm text-terracotta-dark">{nameError}</p>}
       </header>
+
+      <PersonContextSection
+        person={bundle.person}
+        onSave={(context) => void updatePersonContext(pageKey, context)}
+      />
 
       <PersonLocationsSection
         person={bundle.person}

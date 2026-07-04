@@ -22,8 +22,6 @@ export function HomePage() {
   const bundles = useAppStore((s) => s.bundles);
   const ensureSearchBundles = useAppStore((s) => s.ensureSearchBundles);
   const [query, setQuery] = useState("");
-  const [newName, setNewName] = useState("");
-  const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const allPeople = useMemo(
@@ -44,17 +42,6 @@ export function HomePage() {
 
   const searching = query.trim().length > 0;
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    try {
-      await addPerson(newName);
-      setNewName("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add person.");
-    }
-  }
-
   return (
     <div className="page page-enter">
       <header className="mb-8 flex items-start justify-between gap-4">
@@ -71,7 +58,7 @@ export function HomePage() {
 
       <NearbyLocationSection people={allPeople} />
 
-      <div className="card-padded mb-6 space-y-4">
+      <div className="card-padded mb-6">
         <input
           type="search"
           value={query}
@@ -79,19 +66,6 @@ export function HomePage() {
           placeholder="Search friends, topics, and facts…"
           className="input"
         />
-
-        <form onSubmit={handleAdd} className="flex gap-2.5">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Add a friend…"
-            className="input min-w-0 flex-1"
-          />
-          <button type="submit" className="btn-primary">
-            Add
-          </button>
-        </form>
-        {error && <p className="text-sm text-terracotta-dark">{error}</p>}
       </div>
 
       <FriendsSection
@@ -99,6 +73,7 @@ export function HomePage() {
         folders={peopleFolders}
         sortable={!searching}
         onDeletePerson={setDeleteTarget}
+        onAddPerson={addPerson}
         onMovePersonToFolder={(nameKey, folderId) => void movePersonToFolder(nameKey, folderId)}
         onDropPersonOnPerson={(draggedKey, targetKey) => void dropPersonOnPerson(draggedKey, targetKey)}
         onAddFolder={(name) => void addPeopleFolder(name)}
